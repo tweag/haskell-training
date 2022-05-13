@@ -1,0 +1,6 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "haskell-training:lib"
+    - path: "./game-engine"
+      component: "haskell-training:exe:game-engine"
