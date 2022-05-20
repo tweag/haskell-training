@@ -18,8 +18,8 @@ library:
   source-dirs:      src
 
 executables:
-  game-engine:
-    source-dirs:    game-engine
+  workflow:
+    source-dirs:    workflow
     main:           Main.hs
     dependencies:
       haskell-training

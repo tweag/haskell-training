@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module WorkflowManagement2 where
+module WorkflowManagement where
 
 -- containers
 import Data.Map
@@ -56,10 +56,24 @@ data ExampleState
   | B
   | C
 
+instance PrettyPrint ExampleState where
+  prettyPrint A = "You are in state A"
+  prettyPrint B = "You are in state B"
+  prettyPrint C = "You are in state C. No more options available"
+
 data ExampleTransition
   = ToB
   | ToC
   deriving (Eq, Ord)
+
+instance PrettyPrint ExampleTransition where
+  prettyPrint ToB = "b - move to state B"
+  prettyPrint ToC = "c - move to state C"
+
+instance Parse ExampleTransition where
+  parse "b" = Right ToB
+  parse "c" = Right ToC
+  parse a   = Left $ "unable to parse \"" <> a <> "\" into an ExampleTransition"
 
 exampleWorkflow :: Workflow ExampleState ExampleTransition
 exampleWorkflow = Workflow
@@ -77,7 +91,7 @@ execute workflow = do
   Data.Text.IO.putStr . prettyPrint $ describe workflow
   choice <- Data.Text.IO.getLine
   let unavailableOption transition = Data.Text.unlines
-        [ "Option " <> prettyPrint transition <> " not available in state " <> prettyPrint (currentState workflow)
+        [ "Option \"" <> prettyPrint transition <> "\" not available in state \"" <> prettyPrint (currentState workflow) <> "\""
         , "Please try again."
         ]
   case parse choice >>= maybeToRight <$> unavailableOption <*> advance workflow of
