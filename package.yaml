@@ -14,12 +14,23 @@ dependencies:
   - either
   - text
 
+ghc-options:
+  -W
+  -fwrite-ide-info
+  -hiedir=.hie
+
 library:
   source-dirs:      src
 
 executables:
   workflow:
     source-dirs:    workflow
+    main:           Main.hs
+    dependencies:
+      haskell-training
+
+  forms:
+    source-dirs:    forms
     main:           Main.hs
     dependencies:
       haskell-training
