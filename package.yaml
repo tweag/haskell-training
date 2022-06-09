@@ -10,8 +10,6 @@ extra-source-files:
 
 dependencies:
   - base >= 4.7 && < 5
-  - containers
-  - either
   - text
 
 ghc-options:
@@ -23,12 +21,6 @@ library:
   source-dirs:      src
 
 executables:
-  workflow:
-    source-dirs:    workflow
-    main:           Main.hs
-    dependencies:
-      haskell-training
-
   forms:
     source-dirs:    forms
     main:           Main.hs
