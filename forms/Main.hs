@@ -4,5 +4,5 @@ import Forms
 
 main :: IO ()
 main = do
-  answers <- askMultiple' (AddOne ParagraphQuestion (AddOne NumberQuestion None))
+  answers <- askMultiple [whatIsYourName, howOldAreYou]
   print answers

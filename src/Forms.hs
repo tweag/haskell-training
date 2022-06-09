@@ -1,82 +1,105 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Forms where
 
-import Data.Kind (Type)
+-- base
+import Data.Bifunctor
 import Text.Read (readEither)
 
---newtype Option = Option Text
+-- hourglass
+-- import Time.Types
 
-newtype From = From Int
+-- text
+import Data.Text
+import qualified Data.Text.IO as Text
 
-newtype To = To Int
+data Question = MkQuestion
+  { questionTitle :: Text
+  , questionType  :: QuestionType
+  }
 
 data QuestionType
   = Paragraph
   | Number
-  -- | MultipleChoice
-  -- | LinearScale
 
-data Question (questionType :: QuestionType) where
-  ParagraphQuestion      ::               Question Paragraph
-  NumberQuestion :: Question Number
-  -- MultipleChoiceQuestion :: [Option]   -> Question MultipleChoice
-  -- LinearScaleQuestion    :: From -> To -> Question LinearScale
+whatIsYourName :: Question
+whatIsYourName = MkQuestion
+  { questionTitle = "What is your name?"
+  , questionType = Paragraph
+  }
 
-data AnyQuestion = forall questionType . AnyQuestion (Question questionType)
+howOldAreYou :: Question
+howOldAreYou = MkQuestion
+  { questionTitle = "How old are you?"
+  , questionType = Number
+  }
 
--- data Form = Form
---   { formTitle :: Text
---   , questions :: [AnyQuestion]
+data Answer
+  = ParagraphAnswer Text
+  | NumberAnswer Int
+  deriving Show
+
+parseInt :: Text -> Either Text Int
+parseInt = first pack . readEither . unpack
+
+ask :: Question -> IO Answer
+ask question = do
+  Text.putStrLn (questionTitle question)
+  answer <- Text.getLine
+  case questionType question of
+    Paragraph -> pure (ParagraphAnswer answer)
+    Number    ->
+      case parseInt answer of
+        Left errorMessage -> do
+          Text.putStrLn ("invalid integer: " <> errorMessage <> ". Try again")
+          ask question
+        Right intAnswer   -> pure (NumberAnswer intAnswer)
+
+askMultiple :: [Question] -> IO [Answer]
+askMultiple = traverse ask
+
+-- newtype Option = Option Text
+
+-- newtype From = From Int
+
+-- newtype To = To Int
+
+-- data QuestionType
+--   = QuestionParagraph
+--   | QuestionNumber
+--   -- | QuestionMultipleChoice [Option]
+--   -- | QuestionCheckboxes [Option]
+--   -- | QuestionLinearScale From To
+--   -- | QuestionDate
+--   -- | QuestionTime
+
+-- data Question = Question
+--   { questionTitle :: Text
+--   , questionType :: QuestionType
 --   }
 
-data Answer (questionType :: QuestionType) where
-  ParagraphAnswer      :: String     -> Answer Paragraph
-  NumberAnswer :: Int -> Answer Number
-  -- MultipleChoiceAnswer :: [Option] -> Answer MultipleChoice
-  -- LinearScaleAnswer    :: Int      -> Answer LinearScale
+-- data Answer
+--   = AnswerParagraph Text
+--   | AnswerNumber Int
+--   -- | AnswerMultipleChoice Option
+--   -- | AnswerCheckboxes [Option]
+--   -- | AnswerLinearScale Int
+--   -- | AnswerDate Date
+--   -- | AnswerTime TimeOfDay
+--   deriving stock Show
 
-instance Show (Answer questionType) where
-  show (ParagraphAnswer s) = "ParagraphAnswer " <> s
-  show (NumberAnswer i)    = "NumberAnswer " <> show i
+-- ask :: Question -> IO Answer
+-- ask question@(Question title questionType) = do
+--   TextIO.putStrLn title
+--   case questionType of
+--     QuestionParagraph -> AnswerParagraph <$> TextIO.getLine
+--     QuestionNumber    -> do
+--       answer <- TextIO.getLine
+--       case readEither (unpack answer) of
+--         Left s -> do
+--           putStrLn $ "wrong format: " <> s <> ". Try again"
+--           ask question
+--         Right numberAnswer -> pure $ AnswerNumber numberAnswer
 
-data AnyAnswer = forall questionType . AnyAnswer (Answer questionType)
-
-instance Show AnyAnswer where
-  show (AnyAnswer answer) = show answer
-
-ask :: Question questionType -> IO (Answer questionType)
-ask ParagraphQuestion = do
-  putStrLn "Please write a paragraph"
-  ParagraphAnswer <$> getLine
-ask NumberQuestion = do
-  putStrLn "Please write a number"
-  answer <- getLine
-  case readEither answer of
-    Left s -> do
-      putStrLn $ "wrong format: " <> s <> ". Try again"
-      ask NumberQuestion
-    Right i -> pure $ NumberAnswer i
-
-askMultiple :: [AnyQuestion] -> IO [AnyAnswer]
-askMultiple [] = pure []
-askMultiple (AnyQuestion question : tail) = do
-  firstAnswer <- AnyAnswer <$> ask question
-  (firstAnswer :) <$> askMultiple tail
-
-data QuestionTypedList (a :: QuestionType -> Type) (questionsType :: [QuestionType]) where
-  None :: QuestionTypedList a '[]
-  AddOne :: a questionType -> QuestionTypedList a questionsType -> QuestionTypedList a (questionType ': questionsType)
-
-instance (forall questionType . Show (a questionType)) => Show (QuestionTypedList a questionsType) where
-  show None = "None"
-  show (AddOne question otherQuestions) = "AddOne (" <> show question <> ") (" <> show otherQuestions <> ")"
-
-askMultiple' :: QuestionTypedList Question questionTypes -> IO (QuestionTypedList Answer questionTypes)
-askMultiple' None = pure None
-askMultiple' (AddOne question otherQuestions) = AddOne <$> ask question <*> askMultiple' otherQuestions
+-- askMultiple :: [Question] -> IO [Answer]
+-- askMultiple = traverse ask
