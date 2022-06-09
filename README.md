@@ -5,3 +5,11 @@ Principles of the course:
 - try not to over-abstract before it is needed;
 - introduce concepts only when they solve an issue (see https://mkremins.github.io/blog/doors-headaches-intellectual-need/);
 - introduce concepts one by one;
+
+## Outline
+
+- [Domain definition and basic terminal interaction](https://hackmd.io/CiiOhZqPS8CmFJYxrJZSfg)
+- Exposing a web API with Servant
+- Adding persistence
+- Testing
+- Bonus chapter: tooling
