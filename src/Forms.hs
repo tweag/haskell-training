@@ -1,10 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Forms where
 
 -- base
 import Data.Bifunctor
 import Text.Read (readEither)
+
+-- rel8
+import Rel8
 
 -- text
 import Data.Text
@@ -18,6 +22,8 @@ data Question = MkQuestion
 data QuestionType
   = Paragraph
   | Number
+  deriving stock (Read, Show)
+  deriving DBType via ReadShow QuestionType
 
 whatIsYourName :: Question
 whatIsYourName = MkQuestion
@@ -34,7 +40,8 @@ howOldAreYou = MkQuestion
 data Answer
   = ParagraphAnswer Text
   | NumberAnswer Int
-  deriving Show
+  deriving stock (Read, Show)
+  deriving (DBType, DBEq) via ReadShow Answer
 
 parseInt :: Text -> Either Text Int
 parseInt = first pack . readEither . unpack

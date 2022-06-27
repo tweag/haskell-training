@@ -10,7 +10,10 @@ extra-source-files:
 
 dependencies:
   - base >= 4.7 && < 5
+  - rel8
+  - semigroupoids
   - text
+  - uuid
 
 ghc-options:
   -W
@@ -25,4 +28,6 @@ executables:
     source-dirs:    forms
     main:           Main.hs
     dependencies:
-      haskell-training
+      - haskell-training
+      - bytestring
+      - hasql
