@@ -4,11 +4,11 @@ Material for a Haskell training course
 
 ## Haskell at work
 
-The course aims to propose a practical approach to Haskell. The course develops around the creation and evolution of a concrete project. It includes theory and a lot of practice. Certain parts of the project will be pre-developed, but the student would have to interact with them anyway.
+The course proposes a practical approach to Haskell. The course develops around the creation and evolution of a concrete project. It will contain some theory and a lot of practice. Certain parts of the project will be pre-developed, but the student will have to interact with what's provided and expand upon it.
 
-Some more advanced concepts might be touched (e.g. type-level programming with Servant) but they will not be examined in depth.
+Some more advanced concepts will be introduced (e.g. type-level programming with Servant) but will not be examined in depth.
 
-Everything will be developed keeping in mind the good practices of software engineering.
+Everything will be developed with the good practices of software engineering in mind.
 
 ### Principles
 
