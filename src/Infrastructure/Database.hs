@@ -6,9 +6,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Database where
+module Infrastructure.Database where
 
-import qualified Forms
+import qualified Domain.Forms as Forms
 
 -- base
 import GHC.Generics
@@ -121,20 +121,21 @@ questionnaireAnswers questionnaireId = do
   where_ $ answerQuestionId answer ==. questionId question
   pure answer
 
--- questionnaireAnswersByQuestion :: QuestionnaireId -> Query (Answer Expr)
--- questionnaireAnswersByQuestion questionnaireId = do
---   answer <- questionnaireAnswers questionnaireId
---   aggregate $ Rel8.groupBy _
-
-answersBySetId :: Query (Expr AnswerSetId, ListTable Expr (Answer Expr))
-answersBySetId = answersGroupedBy answerSetId
-
-answersByQuestion :: Query (Expr QuestionId, ListTable Expr (Answer Expr))
-answersByQuestion = answersGroupedBy answerQuestionId
-
-answersGroupedBy :: DBEq a => (Answer Expr -> Column Expr a) -> Query (Expr a, ListTable Expr (Answer Expr))
-answersGroupedBy group = aggregate $ do
-  answer <- each answerSchema
+groupedBy :: DBEq a => Query (Answer Expr) -> (Answer Expr -> Column Expr a) -> Query (Expr a, ListTable Expr (Answer Expr))
+groupedBy answerQuery group = aggregate $ do
+  answer <- answerQuery
   let groupedBy    = Rel8.groupBy (group answer)
   let groupAnswers = listAgg answer
   pure (groupedBy, groupAnswers)
+
+answersBySetId :: Query (Expr AnswerSetId, ListTable Expr (Answer Expr))
+answersBySetId = each answerSchema `groupedBy` answerSetId
+
+answersByQuestion :: Query (Expr QuestionId, ListTable Expr (Answer Expr))
+answersByQuestion = each answerSchema `groupedBy` answerQuestionId
+
+questionnaireAnswersBySetId :: QuestionnaireId -> Query (Expr AnswerSetId, ListTable Expr (Answer Expr))
+questionnaireAnswersBySetId questionnaireId = questionnaireAnswers questionnaireId `groupedBy` answerSetId
+
+questionnaireAnswersByQuestion :: QuestionnaireId -> Query (Expr QuestionId, ListTable Expr (Answer Expr))
+questionnaireAnswersByQuestion questionnaireId = questionnaireAnswers questionnaireId `groupedBy` answerQuestionId

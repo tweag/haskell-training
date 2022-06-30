@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingVia #-}
 
-module Forms where
+module Domain.Forms where
 
 -- base
 import Data.Bifunctor

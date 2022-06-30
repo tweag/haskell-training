@@ -5,7 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 
-module FormsAdvanced where
+module Domain.FormsAdvanced where
 
 import Data.Kind (Type)
 import Text.Read (readEither)
