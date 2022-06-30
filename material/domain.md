@@ -2,15 +2,15 @@
 
 ---
 
-We would like to create a simplified clone of Google forms. That is, we would like to create a web app which allows creating questionnaires and provide answers to them.
+In this first chapter, we want to start creating a simplified clone of Google Forms. That is, we want to create a web app which allows us to create questionnaires and submit answers to them.
 
 ---
 
-We want to start modelling our domain. The main entities are `Question`s and `Answer`s.
+Let's start modelling our domain. The main entities are `Question`s and `Answer`s.
 
 ---
 
-A `Question` is defined by its title, some text containing the actual question, and the type of answer it requires
+We define a `Question` by its title, some text containing the actual question, and the type required for the answer:
 
 ```haskell
 data Question = MkQuestion
@@ -23,11 +23,13 @@ We are introducing a new type `Question`, with a single constructor `MkQuestion`
 - `questionTitle` of type `String`
 - `questionType` of type `QuestionType`
 
-What is the type of `MkQuestion`, `questionTitle` and `questionType`?
+What is the type of `MkQuestion`, `questionTitle`, and `questionType`?
 
 ---
 
-Suppose we start simple, and we consider forms which could ask questions which require either a text or an integer answer
+Google Forms allows several options for the type of questions (e.g. paragraph, number, multiple choice, data, etc.)
+
+To avoid unnecessary complexity, we begin with forms which could ask questions which require either a text or an integer answer:
 
 ```haskell
 data QuestionType
@@ -43,7 +45,7 @@ Notice that the options for `QuestionType` are closed. It is not possible to add
 
 ---
 
-Now we can start defining some actual question. Try to define the questions `What is your name` and `How old are you?`
+Now we can start defining some actual questions. Try to define the questions `What is your name` and `How old are you?`.
 
 ```haskell
 whatIsYourName :: Question
@@ -61,7 +63,7 @@ howOldAreYou = MkQuestion
 
 ---
 
-Next we should try to define how `Answer`s look like. It could either contain a paragraph of text or an integer.
+Next we should try to define what `Answer`s look like. It could either contain a paragraph of text or an integer.
 
 Try to define an `Answer` type
 
@@ -75,7 +77,7 @@ We are defining the `Answer` type, with two constructors `ParagraphAnswer` and `
 
 ---
 
-Before we continue, let's refine out type for dealing with strings. `String` is defined as a [list of characters](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:String). This makes it easy to manipulate but not extremely performant. As a consequence, it is not what is recommended for a production project. Use [`Text`](https://hackage.haskell.org/package/text-2.0/docs/Data-Text.html#t:Text) instead.
+Before we continue, let's refine our type for dealing with strings. A `String` is defined as a [list of characters](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:String). This makes it easy to manipulate but not particularly performant. As a consequence, it is not recommended for a production project. Use [`Text`](https://hackage.haskell.org/package/text-2.0/docs/Data-Text.html#t:Text) instead, which provides a similar API but is optimized for better performance.
 
 See also:
 - https://www.fpcomplete.com/haskell/tutorial/string-types/
@@ -85,11 +87,11 @@ See also:
 
 ---
 
-Let's then refactor our code to use `Text` instead of `String`
+Let's then refactor our code to use `Text` instead of `String`.
 
 ---
 
-We need to import the `Text` type
+We need to first import the `Text` type:
 
 ```haskell
 -- text
@@ -98,7 +100,7 @@ import Data.Text (Text)
 
 ---
 
-We also need to declare the `text` package as a dependency in `package.yaml`
+We also need to declare the `text` package as a dependency in `package.yaml`:
 
 ```yaml
 dependencies:
@@ -107,9 +109,9 @@ dependencies:
 
 ---
 
-The compiler is telling us that he is expecting `Text`s, but it is still seeing `String`s.
+The compiler is telling us that it is expecting `Text`s, but is still seeing `String`s.
 
-This could be solved with a so-called pragma, to enable the `OverloadedStrings` extension
+We could solve this by enabling the `OverloadedStrings` extension. One way to do this is using a [pragma](https://wiki.haskell.org/Language_Pragmas) on top of our module:
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
@@ -123,13 +125,13 @@ This could be solved with a so-called pragma, to enable the `OverloadedStrings` 
 
 Now we have an extremely basic model for our domain.
 
-Next we would like to try the interaction with the user, asking him a question and letting them reply with an answer.
+Next we want to try interacting with the user, asking them a question and letting them reply with an answer.
 
-We would like to do this using the terminal as our interaction medium
+We want to do this using the terminal as our interaction medium.
 
 ---
 
-We would like to obtain an `Answer` from a `Question`. We could use a function to model this.
+We want to obtain an `Answer` from a `Question`. We could use a function to model this.
 
 ```haskell
 ask :: Question -> Answer
@@ -490,7 +492,7 @@ stack exec forms
 
 ---
 
-Next, we would like to be able to ask multiple questions one after the other
+Next, we want to be able to ask multiple questions one after the other
 
 ```haskell
 askMultiple :: [Question] -> IO [Answer]
