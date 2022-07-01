@@ -10,7 +10,7 @@ In the Haskell ecosystem there are several libraries one could choose to interac
 
 They differ a lot in the degree of abstraction they add on top of the database.
 
-The simplest is [postgresql-simple](https://hackage.haskell.org/package/postgresql-simple)
+The simplest are [postgresql-simple](https://hackage.haskell.org/package/postgresql-simple) and [mysql-simple](https://hackage.haskell.org/package/mysql-simple)
 
 ---
 
@@ -50,7 +50,7 @@ erDiagram
 
 ---
 
-Let's start working on a new file, say `Infrastructure/Persistnce.hs`
+Let's start working on a new file, say `Infrastructure/Persistence.hs`
 
 ```haskell
 module Infrastructure.Persistence where
@@ -209,6 +209,189 @@ answerSchema = TableSchema
     }
   }
 ```
+
+---
+
+To many fields are using the `UUID` type and the change of confusing between them is extremely high.
+
+We want those fields to have a different type at the Haskell level, so that the type system would prevent us from making a mistake.
+
+---
+
+We are going to use [`newtype`s](https://wiki.haskell.org/Newtype). They wrap a single data type to create a different data type with the same runtime representation.
+
+```haskell
+newytpe Age = Age Int
+```
+
+It allows us to enlarge our domain language without incurring in any runtime overhead.
+
+---
+
+We are going to define domain specific `id`s.
+
+```haskell
+newtype QuestionnaireId = QuestionnaireId UUID
+  deriving newtype (DBType)
+
+newtype QuestionId = QuestionId UUID
+  deriving newtype (DBType)
+
+newtype AnswerId = AnswerId UUID
+  deriving newtype (DBType)
+
+newtype AnswerSetId = AnswerSetId UUID
+  deriving newtype (DBType)
+```
+
+and use them in the relevant places
+
+---
+
+Now it is time to start writing some queries!
+
+---
+
+The first query we want to write is to extract all the available questionnaires:
+
+```haskell
+allQuestionnaires = each questionnaireSchema
+```
+
+We are defining a value which represents the query which extracts all rows from the table described by the `questionnaireSchema`.
+
+---
+
+The type of `allQuestionnaiers` is
+
+```haskell
+allQuestionnaires :: Query (Questionnaire Expr)
+```
+
+It means that `allQuestionnaires` is a `Query` producing `Questionnaire`s in the `Expr` context.
+
+We use the `Expr` context to create valid typed SQL expressions.
+
+---
+
+Next we want to retrieve all the `Question`s for a single `Questionnaire`.
+
+We want to create a `Query` which produces `Question`s, given a specific `QuestionnaireId`
+
+```haskell
+questionnaireQuestions :: QuestionnaireId -> Query (Question Expr)
+```
+
+---
+
+We start by retrieving all the `Question`s
+
+
+```haskell
+questionnaireQuestions questionnaireId = do
+  question <- each questionSchema
+  _
+```
+
+---
+
+Wait wait wait, what is that `do` doing here? Wasn't it something to be used in `IO`?
+
+---
+
+Actually, `do` notation is far more general and works for every [`Monad`](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:Monad).
+
+For our purposes a monad is a data structure which allows executing sequential computation is a given context.
+
+---
+
+As you might expect, `IO` is a monad, `[]` is a monad and `Query` is a monad.
+
+---
+
+And then we filter only the `questions` which have the correct `QuestionnairId`
+
+`Rel8` offers us a `where_` combinator which allows us to filter based on a criterion.
+
+```haskell
+  where_ $ _
+  _
+```
+
+where the `_` has type `Expr Bool`
+
+---
+
+First we want to extract the `questionQuestionnaireId`.
+
+We can use the `questionQuestionnaireId` field as a function
+
+```haskell
+  where_ $ _ (questionQuestionnaireId question)
+```
+
+and be left with a hole `_ :: Expr QuestionnaireId -> Expr Bool` to fill.
+
+---
+
+We need to compare our `questionQuestionnaireId question` with the `questionId` we got as input.
+
+We can do this using the [`(==.)`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:-61--61-.) operator.
+
+```haskell
+  where_ $ questionQuestionnaireId question ==. _
+```
+
+---
+
+The compiler is signalling us that we are missing a `DBEq` instance on `QuestionnaireId`.
+
+Actually, let's add it to all the `Id`s type we introduced.
+
+```haskell
+  deriving newtype (DBType, DBEq)
+```
+
+---
+
+Now we need a value of type `Expr QuestionnaireId` to fill our remaining hole.
+
+We can use the [`lit`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:lit) function to lift our `QuestionnaireId` to the `Expr` context.
+
+```haskell
+  where_ $ questionQuestionnaireId question ==. lit questionnaireId
+```
+
+---
+
+As a last step, we need to return a value
+
+```haskell
+questionnaireQuestions questionnaireId = do
+  question <- each questionSchema
+  where_ $ questionQuestionnaireId question ==. lit questionnaireId
+  pure question
+```
+
+---
+
+As an exercise, try to implement yourself the query to retrieve all the answers for a specific questionnaire
+
+---
+
+```haskell
+questionnaireAnswers :: QuestionnaireId -> Query (Answer Expr)
+questionnaireAnswers questionnaireId = do
+  question <- questionnaireQuestions questionnaireId
+  answer <- each answerSchema
+  where_ $ answerQuestionId answer ==. questionId question
+  pure answer
+```
+
+
+
+
+
 
 
 
