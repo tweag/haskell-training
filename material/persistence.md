@@ -388,6 +388,18 @@ questionnaireAnswers questionnaireId = do
   pure answer
 ```
 
+---
+
+All other queries we need are provided by us.
+
+---
+
+Now we need to restructure a bit our domain so that it could reflect the information we are storing in our database.
+
+Still we want to keep our domain completely separate from the database layer
+
+---
+
 
 
 
