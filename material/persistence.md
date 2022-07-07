@@ -14,11 +14,7 @@ The simplest are [postgresql-simple](https://hackage.haskell.org/package/postgre
 
 ---
 
-We are going to use [rel8](https://hackage.haskell.org/package/rel8), a library which focuses on:
-
-- conciseness
-- inferrability
-- familiarity
+We are going to use [rel8](https://hackage.haskell.org/package/rel8), a library which helps us to abstract away from the database and have a very Haskell-oriented approach
 
 ---
 
@@ -84,9 +80,7 @@ data Questionnaire f = Questionnaire
 
 What is that `f`?
 
-It is a unary type constructor with kind `f :: Type -> Type`, like `[]` and `IO`
-
-It describes the wrapper/context in which the data need to be considered
+It describes the context (e.g. documentation/query expressions/results) in which the data need to be considered
 
 ---
 
@@ -99,7 +93,6 @@ It is useful to distinguish the shape of data from the context in which they are
 To please `Rel8`, we need to add some deriving clauses
 
 ```haskell
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 
@@ -110,21 +103,14 @@ data Questionnaire f = Questionnaire
   { questionnaireId    :: Column f UUID
   , questionnaireTitle :: Column f Text
   }
-  deriving stock Generic
-  deriving anyclass Rel8able
+  deriving (Generic, Rel8able)
 ```
-
----
-
-We're explicitly telling the compiler which deriving strategy to use.
 
 ---
 
 Next we need to define the schema for the questionnaire table
 
 ```haskell
-{-# LANGUAGE OverloadedStrings #-}
-
 questionnaireSchema :: TableSchema (Questionnaire Name)
 ```
 
@@ -133,6 +119,8 @@ questionnaireSchema :: TableSchema (Questionnaire Name)
 A `TableSchema (Questionnaire Name)` requires us to provide a `name`, a `schema`, and a name of a column for every field of a `Questionnaire`
 
 ```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
 questionnaireSchema = TableSchema
   { name = "questionnaire"
   , schema = Nothing
@@ -148,11 +136,10 @@ questionnaireSchema = TableSchema
 This is our first example of a context
 
 ```haskell
-type Name :: Type -> Type
-newtype Name a = Name String
+data Name a = Name String
 ```
 
-It is the constant function which always return a wrapped `String`.
+`Name a` is a datatype that contains a `String` for every type `a`.
 
 It is useful for documentation.
 
@@ -166,15 +153,16 @@ Now you could try to do the same thing for `Question` and `Answer`, following th
 
 ---
 
+TODO: qualified imports
+
 ```haskell
 data Question f = Question
   { questionId              :: Column f UUID
   , questionQuestionnaireId :: Column f UUID
   , questionTitle           :: Column f Text
-  , questionType            :: Column f Domain.QuestionType
+  , questionType            :: Column f QuestionType
   }
-  deriving stock Generic
-  deriving anyclass Rel8able
+  deriving (Generic, Rel8able)
 
 questionSchema :: TableSchema (Question Name)
 questionSchema = TableSchema
@@ -192,10 +180,9 @@ data Answer f = Answer
   { answerId         :: Column f UUID
   , answerQuestionId :: Column f UUID
   , answerSetId      :: Column f UUID
-  , answerContent    :: Column f Domain.Answer
+  , answerContent    :: Column f Answer
   }
-  deriving stock Generic
-  deriving anyclass Rel8able
+  deriving (Generic, Rel8able)
 
 answerSchema :: TableSchema (Answer Name)
 answerSchema = TableSchema
@@ -231,6 +218,9 @@ It allows us to enlarge our domain language without incurring in any runtime ove
 We are going to define domain specific `id`s.
 
 ```haskell
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 newtype QuestionnaireId = QuestionnaireId UUID
   deriving newtype (DBType)
 
@@ -248,6 +238,10 @@ and use them in the relevant places
 
 ---
 
+Notice the `newtype` keyword after `deriving`. Since there is more than one way to derive an instance, we explicitly inform the compiler which strategy should be used.
+
+---
+
 Now it is time to start writing some queries!
 
 ---
@@ -255,6 +249,7 @@ Now it is time to start writing some queries!
 The first query we want to write is to extract all the available questionnaires:
 
 ```haskell
+-- SQL: SELECT * FROM questionnaire
 allQuestionnaires = each questionnaireSchema
 ```
 
@@ -276,6 +271,13 @@ We use the `Expr` context to create valid typed SQL expressions.
 
 Next we want to retrieve all the `Question`s for a single `Questionnaire`.
 
+```sql
+SELECT * FROM question
+WHERE questionnaier_id = :questionnaire_id
+```
+
+---
+
 We want to create a `Query` which produces `Question`s, given a specific `QuestionnaireId`
 
 ```haskell
@@ -295,17 +297,17 @@ questionnaireQuestions questionnaireId = do
 
 ---
 
-Wait wait wait, what is that `do` doing here? Wasn't it something to be used in `IO`?
+This is the same `do` notation we saw for `IO`
 
 ---
 
 Actually, `do` notation is far more general and works for every [`Monad`](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:Monad).
 
-For our purposes a monad is a data structure which allows executing sequential computation is a given context.
+For our purposes a monad instance on a data structure allows executing sequential computation is a given context.
 
 ---
 
-As you might expect, `IO` is a monad, `[]` is a monad and `Query` is a monad.
+As you might expect, `IO` is a monad, and `Query` is a monad.
 
 ---
 
@@ -344,7 +346,7 @@ We can do this using the [`(==.)`](https://hackage.haskell.org/package/rel8-1.3.
 
 ---
 
-The compiler is signalling us that we are missing a `DBEq` instance on `QuestionnaireId`.
+The compiler is signalling us that we are missing a `DBEq` instance on `QuestionnaireId`, which is needed to compare fields for equality.
 
 Actually, let's add it to all the `Id`s type we introduced.
 
@@ -387,6 +389,73 @@ questionnaireAnswers questionnaireId = do
   where_ $ answerQuestionId answer ==. questionId question
   pure answer
 ```
+
+---
+
+Now we would like to execute this last query and print results to the console
+
+We're not going to analyze the code in detail, we're just going to check that it works
+
+---
+
+First, we need to be able to print some `Answer Result`
+
+```haskell
+
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+
+deriving stock instance f ~ Result => Show (Answer f)
+```
+
+---
+
+Then we can write our `main` function to run the query and print its results
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+module Main where
+
+-- import Forms
+import Infrastructure.Persistence
+
+-- base
+import Data.Maybe (fromMaybe)
+
+-- bytestring
+import Data.ByteString.Char8 (unpack)
+
+-- hasql
+import Hasql.Connection
+import Hasql.Session (run, statement)
+
+-- rel8
+import Rel8 (select)
+
+-- uuid
+import Data.UUID (nil)
+
+main :: IO ()
+main = do
+  connection <- acquire "host=localhost port=5432 dbname=db user=user password=pwd"
+  either
+    (fail . unpack . fromMaybe "unable to connect to the database")
+    (\connection' -> do
+      response <- run (statement () . select $ questionnaireAnswers (QuestionnaireId nil)) connection'
+      print response)
+    connection
+```
+
+---
+
+And we can try to run it with
+
+```bash
+stack exec forms
+```
+
+The results will depend on the data you have in your database
 
 ---
 
