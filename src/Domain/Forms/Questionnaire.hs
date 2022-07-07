@@ -1,11 +1,8 @@
 module Domain.Forms.Questionnaire where
 
-import Domain.Forms.Question
-
 -- text
 import Data.Text
 
-data Questionnaire = Questionnaire
+newtype Questionnaire = Questionnaire
   { title :: Text
-  , questions :: [Question]
   }
