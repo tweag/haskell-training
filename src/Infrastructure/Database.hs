@@ -8,7 +8,10 @@
 
 module Infrastructure.Database where
 
-import qualified Domain.Forms as Forms
+import Domain.Forms.Id
+import qualified Domain.Forms.Answer as Domain
+import qualified Domain.Forms.Question as Domain
+import qualified Domain.Forms.Questionnaire as Domain
 
 -- base
 import GHC.Generics
@@ -23,11 +26,8 @@ import Data.Text
 -- uuid
 import Data.UUID
 
-newtype QuestionnaireId = QuestionnaireId UUID
-  deriving newtype (DBEq, DBType, Eq, Show)
-
 data Questionnaire f = Questionnaire
-  { questionnaireId    :: Column f QuestionnaireId
+  { questionnaireId    :: Column f (Id Domain.Questionnaire)
   , questionnaireTitle :: Column f Text
   }
   deriving stock Generic
@@ -43,14 +43,11 @@ questionnaireSchema = TableSchema
     }
   }
 
-newtype QuestionId = QuestionId UUID
-  deriving newtype (DBEq, DBType, Eq, Show)
-
 data Question f = Question
-  { questionId              :: Column f QuestionId
-  , questionQuestionnaireId :: Column f QuestionnaireId
+  { questionId              :: Column f (Id Domain.Question)
+  , questionQuestionnaireId :: Column f (Id Domain.Questionnaire)
   , questionTitle           :: Column f Text
-  , questionType            :: Column f Forms.QuestionType
+  , questionType            :: Column f Domain.QuestionType
   }
   deriving stock Generic
   deriving anyclass Rel8able
@@ -67,17 +64,14 @@ questionSchema = TableSchema
     }
   }
 
-newtype AnswerId = AnswerId UUID
-  deriving newtype (DBEq, DBType, Eq, Show)
-
 newtype AnswerSetId = AnswerSetId UUID
   deriving newtype (DBEq, DBType, Eq, Show)
 
 data Answer f = Answer
-  { answerId         :: Column f AnswerId
-  , answerQuestionId :: Column f QuestionId
+  { answerId         :: Column f (Id Domain.Answer)
+  , answerQuestionId :: Column f (Id Domain.Question)
   , answerSetId      :: Column f AnswerSetId
-  , answerContent    :: Column f Forms.Answer
+  , answerContent    :: Column f Domain.AnswerContent
   }
   deriving stock Generic
   deriving anyclass Rel8able
@@ -109,12 +103,12 @@ add schema rows' = Insert
 allQuestionnaires :: Query (Questionnaire Expr)
 allQuestionnaires = each questionnaireSchema
 
-questionnaireQuestions :: QuestionnaireId -> Query (Question Expr)
+questionnaireQuestions :: Id Domain.Questionnaire -> Query (Question Expr)
 questionnaireQuestions questionnaireId = do
   questions <- each questionSchema
   Rel8.filter ((==. lit questionnaireId) . questionQuestionnaireId) questions
 
-questionnaireAnswers :: QuestionnaireId -> Query (Answer Expr)
+questionnaireAnswers :: Id Domain.Questionnaire -> Query (Answer Expr)
 questionnaireAnswers questionnaireId = do
   question <- questionnaireQuestions questionnaireId
   answer <- each answerSchema
@@ -131,11 +125,11 @@ groupedBy answerQuery group = aggregate $ do
 answersBySetId :: Query (Expr AnswerSetId, ListTable Expr (Answer Expr))
 answersBySetId = each answerSchema `groupedBy` answerSetId
 
-answersByQuestion :: Query (Expr QuestionId, ListTable Expr (Answer Expr))
+answersByQuestion :: Query (Expr (Id Domain.Question), ListTable Expr (Answer Expr))
 answersByQuestion = each answerSchema `groupedBy` answerQuestionId
 
-questionnaireAnswersBySetId :: QuestionnaireId -> Query (Expr AnswerSetId, ListTable Expr (Answer Expr))
+questionnaireAnswersBySetId :: Id Domain.Questionnaire -> Query (Expr AnswerSetId, ListTable Expr (Answer Expr))
 questionnaireAnswersBySetId questionnaireId = questionnaireAnswers questionnaireId `groupedBy` answerSetId
 
-questionnaireAnswersByQuestion :: QuestionnaireId -> Query (Expr QuestionId, ListTable Expr (Answer Expr))
+questionnaireAnswersByQuestion :: Id Domain.Questionnaire -> Query (Expr (Id Domain.Question), ListTable Expr (Answer Expr))
 questionnaireAnswersByQuestion questionnaireId = questionnaireAnswers questionnaireId `groupedBy` answerQuestionId

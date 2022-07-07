@@ -1,8 +1,10 @@
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Infrastructure.Persistence where
 
@@ -27,8 +29,7 @@ data Questionnaire f = Questionnaire
   { questionnaireId    :: Column f QuestionnaireId
   , questionnaireTitle :: Column f Text
   }
-  deriving stock Generic
-  deriving anyclass Rel8able
+  deriving (Generic, Rel8able)
 
 questionnaireSchema :: TableSchema (Questionnaire Name)
 questionnaireSchema = TableSchema
@@ -41,7 +42,7 @@ questionnaireSchema = TableSchema
   }
 
 newtype QuestionId = QuestionId UUID
-  deriving newtype (DBType, DBEq)
+  deriving newtype (DBType, DBEq, Show)
 
 data Question f = Question
   { questionId              :: Column f QuestionId
@@ -65,10 +66,10 @@ questionSchema = TableSchema
   }
 
 newtype AnswerId = AnswerId UUID
-  deriving newtype (DBType, DBEq)
+  deriving newtype (DBType, DBEq, Show)
 
 newtype AnswerSetId = AnswerSetId UUID
-  deriving newtype (DBType, DBEq)
+  deriving newtype (DBType, DBEq, Show)
 
 data Answer f = Answer
   { answerId         :: Column f AnswerId
@@ -76,8 +77,10 @@ data Answer f = Answer
   , answerSetId      :: Column f AnswerSetId
   , answerContent    :: Column f Domain.Answer
   }
-  deriving stock Generic
+  deriving stock (Generic)
   deriving anyclass Rel8able
+
+deriving stock instance f ~ Result => Show (Answer f)
 
 answerSchema :: TableSchema (Answer Name)
 answerSchema = TableSchema

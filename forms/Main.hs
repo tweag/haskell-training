@@ -3,7 +3,7 @@
 module Main where
 
 -- import Forms
-import Database
+import Infrastructure.Persistence
 
 -- base
 import Data.Maybe (fromMaybe)
@@ -18,13 +18,16 @@ import Hasql.Session (run, statement)
 -- rel8
 import Rel8 (select)
 
+-- uuid
+import Data.UUID (nil)
+
 main :: IO ()
 main = do
   connection <- acquire "host=localhost port=5432 dbname=db user=user password=pwd"
   either
     (fail . unpack . fromMaybe "unable to connect to the database")
     (\connection' -> do
-      response <- run (statement () . select $ answersBySetId) connection'
+      response <- run (statement () . select $ questionnaireAnswers (QuestionnaireId nil)) connection'
       print response)
     connection
   -- answers <- askMultiple [whatIsYourName, howOldAreYou]
