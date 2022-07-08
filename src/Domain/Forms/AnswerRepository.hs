@@ -12,11 +12,8 @@ data Filter
   = AllQuestionnaires
   | SingleQuestionnaire (Id Questionnaire)
 
-data GroupBy
-  = GroupByQuestion
-  | GroupBySet
-
 data AnswerRepository m = AnswerRepository
-  { addAnswers    :: Map (Id Question) Answer -> m (Map (Id Question) (Id Answer))
-  , selectAnswers :: Filter -> GroupBy -> m [Answer]
+  { addAnswers              :: Map (Id Question) Answer -> m (Map (Id Question) (Id Answer))
+  , selectAnswersBySetId    :: Filter -> m (Map SetId [Answer])
+  , selectAnswersByQuestion :: Filter -> m (Map (Id Question) [Answer])
   }

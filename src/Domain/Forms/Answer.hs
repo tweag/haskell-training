@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Domain.Forms.Answer where
 
@@ -12,6 +13,7 @@ import Data.Text
 import Data.UUID
 
 newtype SetId = SetId UUID
+  deriving newtype (DBType, DBEq, Eq, Ord, Show)
 
 data AnswerContent
   = ParagraphAnswer Text

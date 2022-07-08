@@ -10,4 +10,4 @@ import Rel8
 import Data.UUID
 
 newtype Id a = Id UUID
-  deriving newtype (DBType, DBEq, Show)
+  deriving newtype (DBType, DBEq, Eq, Ord, Show)

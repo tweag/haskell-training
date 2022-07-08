@@ -1,5 +1,7 @@
 module Infrastructure.Serializer where
 
+import qualified Domain.Forms.Answer as Domain
+import qualified Domain.Forms.Answer as Answer
 import Domain.Forms.Id
 import qualified Domain.Forms.Question as Domain
 import qualified Domain.Forms.Question as Question
@@ -41,4 +43,23 @@ deserializeQuestion question =
   , Domain.Question
       (questionTitle question)
       (questionType question)
+  )
+
+-- Answer
+
+serializeAnswer :: Id Domain.Answer -> Id Domain.Question -> Domain.Answer -> Answer Result
+serializeAnswer answerId questionId answer = Answer
+  { answerId = answerId
+  , answerQuestionId = questionId
+  , answerSetId = Answer.setId answer
+  , answerContent = Answer.content answer
+  }
+
+deserializeAnswer :: Answer Result -> (Id Domain.Answer, Id Domain.Question, Domain.Answer)
+deserializeAnswer answer =
+  ( answerId answer
+  , answerQuestionId answer
+  , Domain.Answer
+      (answerSetId answer)
+      (answerContent answer)
   )

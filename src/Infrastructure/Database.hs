@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -22,9 +21,6 @@ import Rel8
 
 -- text
 import Data.Text
-
--- uuid
-import Data.UUID
 
 data Questionnaire f = Questionnaire
   { questionnaireId    :: Column f (Id Domain.Questionnaire)
@@ -64,13 +60,10 @@ questionSchema = TableSchema
     }
   }
 
-newtype AnswerSetId = AnswerSetId UUID
-  deriving newtype (DBEq, DBType, Eq, Show)
-
 data Answer f = Answer
   { answerId         :: Column f (Id Domain.Answer)
   , answerQuestionId :: Column f (Id Domain.Question)
-  , answerSetId      :: Column f AnswerSetId
+  , answerSetId      :: Column f Domain.SetId
   , answerContent    :: Column f Domain.AnswerContent
   }
   deriving stock Generic
@@ -121,15 +114,3 @@ groupedBy answerQuery group = aggregate $ do
   let groupedBy    = Rel8.groupBy (group answer)
   let groupAnswers = listAgg answer
   pure (groupedBy, groupAnswers)
-
-answersBySetId :: Query (Expr AnswerSetId, ListTable Expr (Answer Expr))
-answersBySetId = each answerSchema `groupedBy` answerSetId
-
-answersByQuestion :: Query (Expr (Id Domain.Question), ListTable Expr (Answer Expr))
-answersByQuestion = each answerSchema `groupedBy` answerQuestionId
-
-questionnaireAnswersBySetId :: Id Domain.Questionnaire -> Query (Expr AnswerSetId, ListTable Expr (Answer Expr))
-questionnaireAnswersBySetId questionnaireId = questionnaireAnswers questionnaireId `groupedBy` answerSetId
-
-questionnaireAnswersByQuestion :: Id Domain.Questionnaire -> Query (Expr (Id Domain.Question), ListTable Expr (Answer Expr))
-questionnaireAnswersByQuestion questionnaireId = questionnaireAnswers questionnaireId `groupedBy` answerQuestionId
