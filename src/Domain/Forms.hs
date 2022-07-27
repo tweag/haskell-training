@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Domain.Forms where
 
@@ -41,10 +41,7 @@ data Answer
   = ParagraphAnswer Text
   | NumberAnswer Int
   deriving stock (Read, Show)
-  deriving (DBType, DBEq) via ReadShow Answer
-
-parseInt :: Text -> Either Text Int
-parseInt = first pack . readEither . unpack
+  deriving DBType via ReadShow Answer
 
 ask :: Question -> IO Answer
 ask question = do
@@ -58,6 +55,9 @@ ask question = do
           Text.putStrLn ("invalid integer: " <> errorMessage <> ". Try again")
           ask question
         Right intAnswer   -> pure (NumberAnswer intAnswer)
+
+parseInt :: Text -> Either Text Int
+parseInt = first pack . readEither . unpack
 
 askMultiple :: [Question] -> IO [Answer]
 askMultiple = traverse ask

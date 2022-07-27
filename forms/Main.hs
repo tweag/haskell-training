@@ -2,24 +2,24 @@
 
 module Main where
 
--- import Forms
+import Domain.Forms.Id
 import Infrastructure.Persistence
 
 -- base
-import Data.Maybe (fromMaybe)
+import Data.Maybe
 
 -- bytestring
-import Data.ByteString.Char8 (unpack)
+import Data.ByteString.Char8
 
 -- hasql
 import Hasql.Connection
-import Hasql.Session (run, statement)
+import Hasql.Session
 
 -- rel8
-import Rel8 (select)
+import Rel8
 
 -- uuid
-import Data.UUID (nil)
+import Data.UUID
 
 main :: IO ()
 main = do
@@ -27,8 +27,6 @@ main = do
   either
     (fail . unpack . fromMaybe "unable to connect to the database")
     (\connection' -> do
-      response <- run (statement () . select $ questionnaireAnswers (QuestionnaireId nil)) connection'
+      response <- run (statement () . select $ questionnaireAnswers (Id nil)) connection'
       print response)
     connection
-  -- answers <- askMultiple [whatIsYourName, howOldAreYou]
-  -- print answers

@@ -109,7 +109,7 @@ dependencies:
 
 ---
 
-The compiler is telling us that it is expecting `Text`s, but is still seeing `String`s.
+The compiler is now telling us that it is expecting `Text`s, but is still seeing `String`s.
 
 We could solve this by enabling the `OverloadedStrings` extension. One way to do this is using a [pragma](https://wiki.haskell.org/Language_Pragmas) on top of our module:
 
@@ -404,11 +404,13 @@ main = _
 Let's try to ask our `whatIsYourName` and `howOldAreYou` questions and then print the answers
 
 ```haskell
+import Domain.Forms
+
 main :: IO ()
 main = do
   name <- ask whatIsYourName
   age  <- ask howOldAreYou
-  putStrLn "name: " <> _ <> ". age: " <> _
+  putStrLn ("name: " <> _ <> ". age: " <> _)
 ```
 
 ---
@@ -550,3 +552,25 @@ main = do
   answers <- askMultiple [whatIsYourName, howOldAreYou]
   print answers
 ```
+
+---
+
+## Learned concepts
+
+- define a data type
+- sum types
+- `Text` over `String`
+- importing packages and modules
+- extensions and pragmas
+- `IO`, `putStrLn` and `getLine`
+- `do` notation
+- qualified imports
+- `case` expressions
+- `pure` as a lifting mechanism
+- `Either` as a failure mechanism
+- `main` to run the code
+- typeclasses and instances
+- `deriving`
+- lists
+- pattern matching
+- `traverse`

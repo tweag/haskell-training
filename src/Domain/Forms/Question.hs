@@ -2,11 +2,11 @@
 
 module Domain.Forms.Question where
 
--- rel8
-import Rel8
-
 -- text
 import Data.Text
+
+-- rel8
+import Rel8
 
 data QuestionType
   = Paragraph

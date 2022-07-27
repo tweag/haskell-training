@@ -8,6 +8,10 @@ import Rel8
 
 --uuid
 import Data.UUID
+import Data.UUID.V4
 
 newtype Id a = Id UUID
-  deriving newtype (DBType, DBEq, Eq, Ord, Show)
+  deriving newtype (DBType, DBEq, Show)
+
+generate :: IO (Id a)
+generate = Id <$> nextRandom

@@ -13,15 +13,15 @@ import Data.Text
 import Data.UUID
 
 newtype SetId = SetId UUID
-  deriving newtype (DBType, DBEq, Eq, Ord, Show)
+  deriving newtype (DBType, DBEq, Show)
 
-data AnswerContent
+data Content
   = ParagraphAnswer Text
   | NumberAnswer Int
   deriving stock (Read, Show)
-  deriving (DBType, DBEq) via ReadShow AnswerContent
+  deriving (DBType, DBEq) via ReadShow Content
 
 data Answer = Answer
-  { setId :: SetId
-  , content :: AnswerContent
+  { setId   :: SetId
+  , content :: Content
   }

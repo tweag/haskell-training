@@ -17,6 +17,7 @@ dependencies:
   - rel8
   - semigroupoids
   - text
+  - transformers
   - uuid
 
 ghc-options:
