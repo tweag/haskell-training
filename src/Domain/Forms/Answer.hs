@@ -13,7 +13,7 @@ import Data.Text
 import Data.UUID
 
 newtype SetId = SetId UUID
-  deriving newtype (DBType, DBEq, Show)
+  deriving newtype (DBType, DBEq, Show, Eq, Ord)
 
 data Content
   = ParagraphAnswer Text

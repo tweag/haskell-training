@@ -105,3 +105,10 @@ questionnaireAnswers questionnaireId = do
   answer <- each answerSchema
   where_ $ answerQuestionId answer ==. questionId question
   pure answer
+
+groupedBy :: DBEq a => Query (Answer Expr) -> (Answer Expr -> Column Expr a) -> Query (Expr a, ListTable Expr (Answer Expr))
+groupedBy answerQuery group = aggregate $ do
+  answer <- answerQuery
+  let groupedBy    = Rel8.groupBy (group answer)
+  let groupAnswers = listAgg answer
+  pure (groupedBy, groupAnswers)

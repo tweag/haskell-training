@@ -1,12 +1,10 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Infrastructure.PostgresQuestionRepository where
 
 import Domain.Forms.Id
 import qualified Domain.Forms.Question as Domain
 import qualified Domain.Forms.Questionnaire as Domain
 import Domain.Forms.QuestionRepository
-import Infrastructure.Database
+import Infrastructure.Persistence
 import Infrastructure.Serializer
 
 -- base
@@ -19,29 +17,26 @@ import Data.Tuple.Extra
 import Hasql.Connection
 import Hasql.Session
 
--- mtl
-import Control.Monad.Except
-
 -- rel8
 import Rel8
 
--- uuid
-import Data.UUID.V4 (nextRandom)
+-- transformers
+import Control.Monad.Trans.Except
 
-
-postgresQuestionRepository :: (Monad m, MonadIO m, MonadError QueryError m) => Connection -> QuestionRepository m
+postgresQuestionRepository :: Connection -> QuestionRepository (ExceptT QueryError IO)
 postgresQuestionRepository connection = QuestionRepository
   { addNewQuestion                  = postgresAddNewQuestion connection
   , selectAllQuestionnaireQuestions = postgresSelectAllQuestionnaireQuestions connection
   }
 
-postgresAddNewQuestion :: (Monad m, MonadIO m, MonadError QueryError m) => Connection -> Id Domain.Questionnaire -> Domain.Question -> m (Id Domain.Question)
+postgresAddNewQuestion :: Connection -> Id Domain.Questionnaire -> Domain.Question -> ExceptT QueryError IO (Id Domain.Question)
 postgresAddNewQuestion connection questionnaireId question = do
-  questionId <- liftIO nextRandom
-  eitherErrorUnit <- liftIO $ run (statement () . insert $ add questionSchema [lit $ serializeQuestion (Id questionId) questionnaireId question]) connection
-  liftEither $ Id questionId <$ eitherErrorUnit
+  questionId <- liftIO generate
+  let addQuestionQuery = add questionSchema [lit $ serializeQuestion questionId questionnaireId question]
+  ExceptT $ run (statement () . insert $ addQuestionQuery) connection
+  pure questionId
 
-postgresSelectAllQuestionnaireQuestions :: (Monad m, MonadIO m, MonadError QueryError m) => Connection -> Id Domain.Questionnaire -> m [Domain.Question]
+postgresSelectAllQuestionnaireQuestions :: Connection -> Id Domain.Questionnaire -> ExceptT QueryError IO [Domain.Question]
 postgresSelectAllQuestionnaireQuestions connection questionnaireId = do
-  eitherErrorQuestions <- liftIO $ run (statement () . select $ questionnaireQuestions questionnaireId) connection
-  liftEither $ fmap (thd3 . deserializeQuestion) <$> eitherErrorQuestions
+  questions <- ExceptT $ run (statement () . select $ questionnaireQuestions questionnaireId) connection
+  pure $ thd3 . deserializeQuestion <$> questions
