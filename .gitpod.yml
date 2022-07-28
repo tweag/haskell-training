@@ -1,0 +1,16 @@
+image:
+  file: .gitpod.Dockerfile
+
+tasks:
+  - init: |
+      stack test
+      docker-compose pull
+
+  - command: |
+      stack test
+      docker-compose up
+
+vscode:
+  extensions:
+    - haskell.haskell
+    - justusadam.language-haskell
