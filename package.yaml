@@ -16,9 +16,12 @@ dependencies:
   - mtl
   - rel8
   - semigroupoids
+  - servant
+  - servant-server
   - text
   - transformers
   - uuid
+  - wai
 
 ghc-options:
   -W
