@@ -29,8 +29,8 @@ data FormsApi mode = FormsApi
   , questionnaireQuestions :: mode :- "questions"            :> Capture "questionnaire" (Id Questionnaire) :> Get  '[JSON] [Identified Question]
   , recordAnswerSet        :: mode :- "record-answer-set"    :> ReqBody '[JSON] [Answer]                   :> Post '[JSON] (Id AnswerSet)
   , answerSets             :: mode :- "answer-sets"          :> Capture "questionnaire" (Id Questionnaire) :> Get  '[JSON] [Id AnswerSet]
-  , setIdAnswers           :: mode :- "set-answers"          :> Capture "set" (Id AnswerSet)               :> Get  '[JSON] [Answer]
-  , questionAnswers        :: mode :- "question-answers"     :> Capture "question" (Id Question)           :> Get  '[JSON] [Answer]
+  , setIdAnswers           :: mode :- "set-answers"          :> Capture "set" (Id AnswerSet)               :> Get  '[JSON] [Identified Answer]
+  , questionAnswers        :: mode :- "question-answers"     :> Capture "question" (Id Question)           :> Get  '[JSON] [Identified Answer]
   }
   deriving Generic
 
@@ -64,8 +64,8 @@ recordAnswerSetHandler = AnswerSet.record
 answerSetsHandler :: AnswerSetRepository Handler -> Id Questionnaire -> Handler [Id AnswerSet]
 answerSetsHandler = AnswerSet.allForQuestionnaire
 
-setIdAnswersHandler :: AnswerRepository Handler -> Id AnswerSet -> Handler [Answer]
+setIdAnswersHandler :: AnswerRepository Handler -> Id AnswerSet -> Handler [Identified Answer]
 setIdAnswersHandler = Answer.allForSet
 
-questionAnswersHandler :: AnswerRepository Handler -> Id Question -> Handler [Answer]
+questionAnswersHandler :: AnswerRepository Handler -> Id Question -> Handler [Identified Answer]
 questionAnswersHandler = Answer.allForQuestion

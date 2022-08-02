@@ -11,6 +11,7 @@ extra-source-files:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
+  - bytestring
   - containers
   - extra
   - hasql

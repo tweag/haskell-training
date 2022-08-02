@@ -1,6 +1,7 @@
 -- {-# LANGUAGE DeriveAnyClass #-}
 -- {-# LANGUAGE DeriveGeneric #-}
 -- {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -17,12 +18,17 @@ import Data.Aeson.Types hiding (Number)
 -- base
 -- import GHC.Generics
 
+-- rel8
+import Rel8
+
 -- text
 import Data.Text
 
 data Content
   = ParagraphAnswer Text
   | NumberAnswer Int
+  deriving stock (Read, Show)
+  deriving DBType via ReadShow Content
   -- deriving stock Generic
   -- deriving anyclass FromJSON
 

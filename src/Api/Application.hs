@@ -1,7 +1,18 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Api.Application where
 
 import Api.AppServices
 import Api.Forms
+
+-- base
+import Data.Maybe
+
+-- bytestring
+import Data.ByteString.Char8
+
+-- hasql
+import Hasql.Connection
 
 -- servant-server
 import Servant
@@ -14,5 +25,8 @@ app appServices = serve (Proxy :: Proxy (NamedRoutes FormsApi)) (formsServer app
 
 main :: IO ()
 main = do
-  appServices <- _
-  run 8080 (app appServices)
+  connection <- acquire "host=postgres port=5432 dbname=db user=user password=pwd"
+  either
+    (fail . unpack . fromMaybe "unable to connect to the database")
+    (run 8080 . app . buildAppServices)
+    connection
