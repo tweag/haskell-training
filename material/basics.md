@@ -108,6 +108,14 @@ Bool -> Bool
 
 ---
 
+Functions are expressions as other values, and they can be defined directly, without the need to be defined explicitly for every input.
+
+```
+> notnot = not . not
+```
+
+---
+
 Let's now leave the REPL (with `:q`) and open a file `src/Basics.hs`
 
 ```haskell
