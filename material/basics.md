@@ -157,6 +157,19 @@ name :: Person -> String
 
 ---
 
+We can define a new `Person` like this
+
+```haskell
+me :: Person
+me = MkPerson
+  { name = "Marco Perone"
+  , age = 38
+  }
+
+stillMe :: Person
+stillMe = MkPerson "Marco Perone" 38
+---
+
 How do we use a `Person`?
 
 ```haskell
