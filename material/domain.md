@@ -8,22 +8,28 @@ In this first chapter, we want to start creating a simplified clone of Google Fo
 
 Let's start modelling our domain. The main entities are `Question`s and `Answer`s.
 
+We use a file `src/Forms.hs`.
+
+```haskell
+module Forms where
+```
+
 ---
 
 We define a `Question` by its title, some text containing the actual question, and the type required for the answer:
 
 ```haskell
 data Question = MkQuestion
-  { questionTitle :: String
-  , questionType  :: QuestionType
+  { title      :: String
+  , answerType :: AnswerType
   }
 ```
 
 We are introducing a new type `Question`, with a single constructor `MkQuestion` and two fields:
-- `questionTitle` of type `String`
-- `questionType` of type `QuestionType`
+- `title` of type `String`
+- `answerType` of type `AnswerType`
 
-What is the type of `MkQuestion`, `questionTitle`, and `questionType`?
+What is the type of `MkQuestion`, `title`, and `answerType`?
 
 ---
 
@@ -32,16 +38,16 @@ Google Forms allows several options for the type of questions (e.g. paragraph, n
 To avoid unnecessary complexity, we begin with forms which could ask questions which require either a text or an integer answer:
 
 ```haskell
-data QuestionType
+data AnswerType
   = Paragraph
   | Number
 ```
 
-We are defining another type `QuestionType` with two constructors `Paragraph` and `Number`. What is their type?
+We are defining another type `AnswerType` with two constructors `Paragraph` and `Number`. What is their type?
 
 ---
 
-Notice that the options for `QuestionType` are closed. It is not possible to add another option without modifying the actual definition.
+Notice that the options for `AnswerType` are closed. It is not possible to add another option without modifying the actual definition.
 
 ---
 
@@ -50,14 +56,14 @@ Now we can start defining some actual questions. Try to define the questions `Wh
 ```haskell
 whatIsYourName :: Question
 whatIsYourName = MkQuestion
-  { questionTitle = "What is your name?"
-  , questionType = Paragraph
+  { title = "What is your name?"
+  , answerType = Paragraph
   }
 
 howOldAreYou :: Question
 howOldAreYou = MkQuestion
-  { questionTitle = "How old are you?"
-  , questionType = Number
+  { title = "How old are you?"
+  , answerType = Number
   }
 ```
 
@@ -74,52 +80,6 @@ data Answer
 ```
 
 We are defining the `Answer` type, with two constructors `ParagraphAnswer` and `NumberAnswer`. What is their type?
-
----
-
-Before we continue, let's refine our type for dealing with strings. A `String` is defined as a [list of characters](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:String). This makes it easy to manipulate but not particularly performant. As a consequence, it is not recommended for a production project. Use [`Text`](https://hackage.haskell.org/package/text-2.0/docs/Data-Text.html#t:Text) instead, which provides a similar API but is optimized for better performance.
-
-See also:
-- https://www.fpcomplete.com/haskell/tutorial/string-types/
-- https://mmhaskell.com/blog/2017/5/15/untangling-haskells-strings
-- https://www.alexeyshmalko.com/2015/haskell-string-types/
-- https://free.cofree.io/2020/05/06/string-types/
-
----
-
-Let's then refactor our code to use `Text` instead of `String`.
-
----
-
-We need to first import the `Text` type:
-
-```haskell
--- text
-import Data.Text (Text)
-```
-
----
-
-We also need to declare the `text` package as a dependency in `package.yaml`:
-
-```yaml
-dependencies:
-  - text
-```
-
----
-
-The compiler is now telling us that it is expecting `Text`s, but is still seeing `String`s.
-
-We could solve this by enabling the `OverloadedStrings` extension. One way to do this is using a [pragma](https://wiki.haskell.org/Language_Pragmas) on top of our module:
-
-```haskell
-{-# LANGUAGE OverloadedStrings #-}
-```
-
----
-
-[Extensions](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/intro.html) are a mechanism to actually modify the language behavior. They are basically feature flags for the compiler.
 
 ---
 
@@ -143,6 +103,43 @@ Beware, all functions in Haskell are pure! Does this mean that we need to define
 
 ---
 
+What does exactly `purity` means?
+
+An expression is said to be [`referentially transparent`](https://www.wikiwand.com/en/Referential_transparency) if it can be replaced with its corresponding value without changing the program's behavior.
+
+For example, `42 * 42 == 42 * 40 + 42 * 2` could be replaced anywhere with `True` without changing the sematics of the program.
+
+---
+
+A function is called `pure` if `f x` is referentially transparent for any possible input `x`.
+
+---
+
+Practically, what does _purity_ means?
+
+It means that we can replace any function `f` with a lookup table which assigns to any input `x` its output `f x`
+
+---
+
+What are the benefits of purity?
+
+- Easy to reason about the code.
+- Easy testing.
+- Easy to compose.
+
+---
+
+What is ruled out by purity? Meaning that it can not be represented by a pure function
+
+- Every side effect, basically.
+- Mutable variables
+- Exceptions
+- (Implicitly) stateful code
+- system interactions
+- random values generation
+
+---
+
 To allow interaction with external world at runtime, we wrap the return type in the `IO` context
 
 ```haskell
@@ -159,11 +156,42 @@ See also
 
 ---
 
-Typical interactions working in the `IO` context are [`putStrLn`](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#v:putStrLn), to print to standard output, and [`getLine`](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#v:getLine), to read a line from standard input
+Before implementing the `ask` function, we need to understand a little better this `IO` type.
 
 ---
 
-Code in the `IO` context is by nature imperative. Haskell has a special notation to write sequential code, introduced by the `do` keyword
+Typical interactions working in the `IO` context are [`putStrLn`](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#v:putStrLn), to print to standard output, and [`getLine`](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#v:getLine), to read a line from standard input
+
+```haskell
+putStrLn :: String -> IO ()
+
+getLine :: IO String
+```
+
+---
+
+Code in the `IO` context is by nature imperative. Haskell has a special notation to write sequential code, introduced by the [`do` keyword](https://en.m.wikibooks.org/wiki/Haskell/Simple_input_and_output)
+
+```haskell
+foo :: a -> IO b
+foo x = do
+  y <- f x -- f :: a -> IO c
+           -- y :: c
+  g y      -- g :: c -> IO b
+```
+
+---
+
+Notice that `do` notation is just syntactic sugar. There's no real value in it, it only makes the code cuter.
+
+The code we write above we could have actually written as
+
+```haskell
+foo :: a -> IO b
+foo = f >=> g
+```
+
+---
 
 Try to write a function which reads a string from standard input and prints it on standard output
 
@@ -199,27 +227,10 @@ ask question = do
 
 The first thing we need to do is actually ask the question, which means printing it to the screen
 
-We need to import the functions we need to work with `Text`
-
 ```haskell
-import Data.Text.IO
-
 ask :: Question -> IO Answer
 ask question = do
-  Data.Text.IO.putStrLn (questionTitle question)
-  _
-```
-
----
-
-To clean it up a bit, we can qualify our import
-
-```haskell
-import qualified Data.Text.IO as Text
-
-ask :: Question -> IO Answer
-ask question = do
-  Text.putStrLn (questionTitle question)
+  putStrLn (title question)
   _
 ```
 
@@ -230,37 +241,37 @@ Then we want to collect the answer provided by the user
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  Text.putStrLn (questionTitle question)
-  answer <- Text.getLine
+  putStrLn (title question)
+  answer <- getLine
   _
 ```
 
 ---
 
-Now `answer` is of type `Text`. It's exactly what we want for a `Paragraph` question, not really for a `Number` one. Therefore, we need to distinguish the two cases. We need a `case` statement
+Now `answer` is of type `String`. It's exactly what we want for a `Paragraph` question, not really for a `Number` one. Therefore, we need to distinguish the two cases. We need a `case` statement
 
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  Text.putStrLn (questionTitle question)
-  answer <- Text.getLine
-  case questionType question of
+  putStrLn (title question)
+  answer <- getLine
+  case answerType question of
     Paragraph -> _
     Number    -> _
 ```
 
 ---
 
-In the `Paragraph` case we have a `Text`, and we need to return an `IO Answer`.
+In the `Paragraph` case we have a `String`, and we need to return an `IO Answer`.
 
-First we can create an `Answer` from a `Text` using the `ParagraphAnswer` constructor
+First we can create an `Answer` from a `String` using the `ParagraphAnswer` constructor
 
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  Text.putStrLn (questionTitle question)
-  answer <- Text.getLine
-  case questionType question of
+  putStrLn (title question)
+  answer <- getLine
+  case answerType question of
     Paragraph -> _ (ParagraphAnswer answer)
     Number    -> _
 ```
@@ -274,29 +285,29 @@ We can use `pure :: a -> IO a`
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  Text.putStrLn (questionTitle question)
-  answer <- Text.getLine
-  case questionType question of
+  putStrLn (title question)
+  answer <- getLine
+  case answerType question of
     Paragraph -> pure (ParagraphAnswer answer)
     Number    -> _
 ```
 
 ---
 
-In the other case, where `questionType` is `Number`, we need to check whether the provided text actually contains a number.
+In the other case, where `answerType` is `Number`, we need to check whether the provided text actually contains a number.
 
 ---
 
 Haskell does not provide casting between different types automatically. Everything needs to be explicit.
 
-We need to parse our text to check if it is an `Int`
+We need to parse our `String` to check if it is an `Int`
 
 ---
 
-What we want is a function that takes some `Text` as input and returns an `Int`
+What we want is a function that takes some `String` as input and returns an `Int`
 
 ```haskell
-parseInt :: Text -> Int
+parseInt :: String -> Int
 ```
 
 ---
@@ -312,7 +323,7 @@ Notice: Haskell has exceptions (only in `IO`, though).
 The standard mechanism to have the possibility of failing while maintaining purity is to enlarge the return type
 
 ```haskell
-parseInt :: Text -> Either Text Int
+parseInt :: String -> Either String Int
 ```
 
 ---
@@ -331,14 +342,27 @@ It is often used for operations which might fail with an error message. Conventi
 
 ---
 
+For the sake of completeness, we can implement `parseInt` as follows.
+
+
+```haskell
+-- base
+import Text.Read (readEither)
+
+parseInt :: String -> Either String Int
+parseInt = readEither
+```
+
+---
+
 Applying `parseInt` to `answer` we can now distinguish the cases where `answer` contains an integer of does not
 
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  Text.putStrLn (questionTitle question)
-  answer <- Text.getLine
-  case questionType question of
+  putStrLn (title question)
+  answer <- getLine
+  case answerType question of
     Paragraph -> pure (ParagraphAnswer answer)
     Number    ->
       case parseInt answer of
@@ -353,9 +377,9 @@ Similarly to what we did for the other case, if we are in the `Right` case, we c
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  Text.putStrLn (questionTitle question)
-  answer <- Text.getLine
-  case questionType question of
+  putStrLn (title question)
+  answer <- getLine
+  case answerType question of
     Paragraph -> pure (ParagraphAnswer answer)
     Number    ->
       case parseInt answer of
@@ -370,14 +394,14 @@ In the `Left` case, we want to inform the user that they did not provide a valid
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  Text.putStrLn (questionTitle question)
-  answer <- Text.getLine
-  case questionType question of
+  putStrLn (title question)
+  answer <- getLine
+  case answerType question of
     Paragraph -> pure (ParagraphAnswer answer)
     Number    ->
       case parseInt answer of
         Left errorMessage -> do
-          Text.putStrLn ("invalid integer: " <> errorMessage <> ". Try again")
+          putStrLn ("invalid integer: " <> errorMessage <> ". Try again")
           ask question
         Right intAnswer   -> pure (NumberAnswer intAnswer)
 ```
@@ -415,7 +439,7 @@ main = do
 
 ---
 
-The compiler complains that he wants strings while we have `Answer`s. Luckily in Haskell there is a standard mechanism to transform a data type to `String`.
+We need to fill the holes with strings while we have `Answer`s. Luckily in Haskell there is a standard mechanism to transform a data type to `String`.
 
 It is the `Show` type class, which provides a `show :: Show a => a -> String` function.
 
@@ -451,7 +475,7 @@ We actually need an instance of `Show` for `Answer`
 
 ```haskell
 instance Show Answer where
-  show (ParagraphAnswer t) = unpack t
+  show (ParagraphAnswer t) = t
   show (NumberAnswer    i) = show i
 ```
 
@@ -471,6 +495,10 @@ data Answer
 Deriving is a huge topic (we're not going into it, though) and can save a lot of boilerplate.
 
 See [here](https://kowainik.github.io/posts/deriving) for more details
+
+---
+
+I need to mention that `Show` should actually be used basically only for debugging. If you need pretty printing to show data to your users, probably `Show` is not what you're looking for.
 
 ---
 
@@ -500,6 +528,8 @@ Next, we want to be able to ask multiple questions one after the other
 askMultiple :: [Question] -> IO [Answer]
 askMultiple questions = _
 ```
+
+Let's try to go through the implementation together
 
 ---
 
@@ -555,16 +585,76 @@ main = do
 
 ---
 
+A `String` is defined as a [list of characters](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:String). This makes it easy to manipulate but not particularly performant. As a consequence, it is not recommended for a production project. Use [`Text`](https://hackage.haskell.org/package/text-2.0/docs/Data-Text.html#t:Text) instead, which provides a similar API but is optimized for better performance.
+
+See also:
+- https://www.fpcomplete.com/haskell/tutorial/string-types/
+- https://mmhaskell.com/blog/2017/5/15/untangling-haskells-strings
+- https://www.alexeyshmalko.com/2015/haskell-string-types/
+- https://free.cofree.io/2020/05/06/string-types/
+
+---
+
+Let's then refactor our code to use `Text` instead of `String`.
+
+---
+
+We need to first import the `Text` type:
+
+```haskell
+-- text
+import Data.Text (Text)
+```
+
+---
+
+We also need to declare the `text` package as a dependency in `package.yaml`:
+
+```yaml
+dependencies:
+  - text
+```
+
+---
+
+We also need to change all the `IO` functions which generally work with `String`s with their corresponding version using `Text`, which can be found in the `Data.Text.IO` module.
+
+```haskell
+import qualified Data.Text.IO as Text
+```
+
+---
+
+`parseInt` needs to handle the conversions between `String` and `Text`
+
+```haskell
+import Data.Bifunctor
+
+parseInt :: Text -> Either Text Int
+parseInt = first pack . readEither . unpack
+```
+
+---
+
+Where we have string literals, the compiler is now telling us that it is expecting `Text`s, but is still seeing `String`s.
+
+We could solve this by enabling the `OverloadedStrings` extension. One way to do this is using a [pragma](https://wiki.haskell.org/Language_Pragmas) on top of our module:
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+```
+
+---
+
+[Extensions](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/intro.html) are a mechanism to actually modify the language behavior. They are basically feature flags for the compiler.
+
+---
 ## Learned concepts
 
 - define a data type
 - sum types
-- `Text` over `String`
-- importing packages and modules
-- extensions and pragmas
 - `IO`, `putStrLn` and `getLine`
 - `do` notation
-- qualified imports
 - `case` expressions
 - `pure` as a lifting mechanism
 - `Either` as a failure mechanism
@@ -574,3 +664,7 @@ main = do
 - lists
 - pattern matching
 - `traverse`
+- `Text` over `String`
+- importing packages and modules
+- extensions and pragmas
+- qualified imports

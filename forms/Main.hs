@@ -1,6 +1,13 @@
 module Main where
 
-import qualified Api.Application as Forms
+import Domain.Forms
 
 main :: IO ()
-main = Forms.main
+main = do
+  answers <- askMultiple [whatIsYourName, howOldAreYou]
+  print answers
+
+-- import qualified Api.Application as Forms
+
+-- main :: IO ()
+-- main = Forms.main
