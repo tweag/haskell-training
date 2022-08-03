@@ -212,6 +212,20 @@ canIPass Red    = False
 
 ---
 
+The same function could be written also using a `case` statement
+
+```haskell
+canIPass :: TrafficLight -> Bool
+canIPass colour = case colour of
+  Green  -> True
+  Yellow -> True
+  Red    -> True
+```
+
+This is useful when you want to split cases in the middle of a function without defining a new function.
+
+---
+
 We can actually combine the two kind of types to create complicated types with multiple constructors, each one containing various data
 
 ```haskell
