@@ -435,7 +435,7 @@ main = _
 Let's try to ask our `whatIsYourName` and `howOldAreYou` questions and then print the answers
 
 ```haskell
-import Domain.Forms
+import Forms
 
 main :: IO ()
 main = do

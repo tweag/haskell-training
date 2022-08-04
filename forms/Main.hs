@@ -1,6 +1,6 @@
 module Main where
 
-import Domain.Forms
+import Forms
 
 main :: IO ()
 main = do
