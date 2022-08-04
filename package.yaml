@@ -9,22 +9,22 @@ extra-source-files:
 - README.md
 
 dependencies:
-  - aeson
+  #- aeson
   - base >= 4.7 && < 5
-  - bytestring
-  - containers
-  - extra
-  - hasql
-  - mtl
-  - rel8
-  - semigroupoids
+  #- bytestring
+  #- containers
+  #- extra
+  #- hasql
+  #- mtl
+  #- rel8
+  #- semigroupoids
   - servant
   - servant-server
   - text
-  - transformers
+  #- transformers
   - uuid
-  - wai
-  - warp
+  #- wai
+  #- warp
 
 ghc-options:
   -W
@@ -40,5 +40,5 @@ executables:
     main:           Main.hs
     dependencies:
       - haskell-training
-      - bytestring
-      - hasql
+      #- bytestring
+      #- hasql
