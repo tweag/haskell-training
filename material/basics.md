@@ -14,8 +14,6 @@ stack ghci
 
 As a functional programming language, Haskell is based on [expressions](https://en.wikipedia.org/wiki/Expression_(mathematics)) rather than statements. While statements instruct the compiler what to do, expressions describe what we want.
 
-> An expression is a syntactic combination of symbols that is well-formed, according to rules that depend on the context
-
 ---
 
 Let's start to try to write some expressions
@@ -59,6 +57,8 @@ Every valid expression in Haskell has a type
 False
 ```
 
+Notice that here we are not selecting a type, just making it explicit.
+
 ---
 
 You can obtain the type of an expression in GHCi using `:t`
@@ -88,15 +88,6 @@ They could be substituted interchangeably.
 
 ---
 
-Even functions are expressions
-
-```
-> :t (&&)
-(&&) :: Bool -> Bool -> Bool
-```
-
----
-
 We can also define our own functions
 
 ```
@@ -108,15 +99,16 @@ Bool -> Bool
 
 ---
 
-Functions are expressions as other values, and they can be defined directly, without the need to be defined explicitly for every input.
+And we can apply functions to values
 
 ```
-> notnot = not . not
+> f True
+True
 ```
 
 ---
 
-Let's now leave the REPL (with `:q`) and open a file `src/Basics.hs`
+Let's now move to work in a file `src/Basics.hs`
 
 ```haskell
 module Basics where
