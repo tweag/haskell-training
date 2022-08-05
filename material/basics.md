@@ -2,7 +2,7 @@
 
 ---
 
-Let's start by reviewing some basic Haskell concepts and its syntax.
+Let's start by looking at some basic Haskell concepts and their syntax.
 
 We're going to use a REPL to play a bit with the language
 
@@ -12,7 +12,7 @@ stack ghci
 
 ---
 
-Differently from many other common languages, Haskell is based on [expressions](https://en.wikipedia.org/wiki/Expression_(mathematics)) rather than statements.
+As a functional programming language, Haskell is based on [expressions](https://en.wikipedia.org/wiki/Expression_(mathematics)) rather than statements. While statements instruct the compiler what to do, expressions describe what we want.
 
 > An expression is a syntactic combination of symbols that is well-formed, according to rules that depend on the context
 
@@ -46,7 +46,7 @@ Evaluation of expressions is just simplification, as in mathematical expressions
 
 ---
 
-Every expression in Haskell has a type
+Every valid expression in Haskell has a type
 
 ```
 > 42 :: Int
@@ -61,7 +61,7 @@ False
 
 ---
 
-You can obtain in GHCi the type of an expression using `:t`
+You can obtain the type of an expression in GHCi using `:t`
 
 ```
 > :t "hello"
@@ -73,7 +73,7 @@ True :: Bool
 
 ---
 
-You can assign names to expressions and declare variables
+You can assign names to expressions and refer to those names in other expressions
 
 ```
 > x = "hello"
@@ -204,7 +204,7 @@ MkPerson1 :: String -> Int -> Person1
 
 ---
 
-Another kind of data type (called sum types) we can define is one which could contain one of several options
+In the examples above, we refer to `MkPerson` and `MkPerson1` as constructors. Data types can have more than one constructor:
 
 ```haskell
 data TrafficLight
@@ -220,7 +220,7 @@ canIPass Red    = False
 
 ---
 
-The same function could be written also using a `case` statement
+The same function could be written also using a `case` expression
 
 ```haskell
 canIPass :: TrafficLight -> Bool
@@ -234,7 +234,7 @@ This is useful when you want to split cases in the middle of a function without 
 
 ---
 
-We can actually combine the two kind of types to create complicated types with multiple constructors, each one containing various data
+Each constructor of a data type can store different data:
 
 ```haskell
 data Shape
@@ -250,7 +250,7 @@ perimeter (Circle radius)         = 2 * pi * radius
 
 ---
 
-Instead of working only with concrete types we could work with type variables (think generics in other languages)
+In addition to working with concrete types, such as `Shape`, we can also work with polymorphic functions  (think generics in other languages) where we have type variables instead of concrete types:
 
 ```
 > :t (:)
