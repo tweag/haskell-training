@@ -126,17 +126,18 @@ What are the benefits of purity?
 - Easy to reason about the code.
 - Easy testing.
 - Easy to compose.
+- Easy to reuse.
 
 ---
 
 What is ruled out by purity? The following can not be represented by pure functions:
 
-- Every side effect, basically.
 - Mutable variables
 - Exceptions
 - (Implicitly) stateful code
 - system interactions
 - random values generation
+- ...
 
 ---
 
@@ -188,7 +189,7 @@ The code we write above we could have actually written as
 
 ```haskell
 foo :: a -> IO b
-foo = f >=> g
+foo x = f x >>= g
 ```
 
 ---
@@ -608,7 +609,7 @@ import Data.Text (Text)
 
 ---
 
-We also need to declare the `text` package as a dependency in `package.yaml`:
+We also need to declare the `text` package as a dependency in `package.yaml`, which is then used to generate a `.cabal` file:
 
 ```yaml
 dependencies:
@@ -628,17 +629,23 @@ import qualified Data.Text.IO as Text
 `parseInt` needs to handle the conversions between `String` and `Text`
 
 ```haskell
-import Data.Bifunctor
-
 parseInt :: Text -> Either Text Int
-parseInt = first pack . readEither . unpack
+parseInt = packLeft . readEither . unpack
+  where
+    packLeft :: Either String Int -> Either Text Int
+    packLeft (Left  s) = Left (pack s)
+    packLeft (Right i) = Right i
 ```
 
 ---
 
 Where we have string literals, the compiler is now telling us that it is expecting `Text`s, but is still seeing `String`s.
 
-We could solve this by enabling the `OverloadedStrings` extension. One way to do this is using a [pragma](https://wiki.haskell.org/Language_Pragmas) on top of our module:
+We could add a [`fromString`](https://hackage.haskell.org/package/base/docs/Data-String.html#v:fromString) everywhere, but that would be extremely annoying.
+
+---
+
+Actually Haskell could add all the `fromString` for us! We can do this by enabling the `OverloadedStrings` extension. One way to do this is using a [pragma](https://wiki.haskell.org/Language_Pragmas) on top of our module:
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}

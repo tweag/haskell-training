@@ -3,7 +3,6 @@
 module Forms where
 
 -- base
-import Data.Bifunctor
 import Text.Read (readEither)
 
 -- text
@@ -50,7 +49,11 @@ ask question = do
         Right intAnswer   -> pure (NumberAnswer intAnswer)
 
 parseInt :: Text -> Either Text Int
-parseInt = first pack . readEither . unpack
+parseInt = packLeft . readEither . unpack
+  where
+    packLeft :: Either String Int -> Either Text Int
+    packLeft (Left  s) = Left (pack s)
+    packLeft (Right i) = Right i
 
 askMultiple :: [Question] -> IO [Answer]
 askMultiple []                         = pure []
