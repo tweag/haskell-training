@@ -103,7 +103,7 @@ Beware, all functions in Haskell are pure! Does this mean that we need to define
 
 ---
 
-What does exactly `purity` means?
+What exactly does `purity` mean?
 
 An expression is said to be [`referentially transparent`](https://www.wikiwand.com/en/Referential_transparency) if it can be replaced with its corresponding value without changing the program's behavior.
 
@@ -129,7 +129,7 @@ What are the benefits of purity?
 
 ---
 
-What is ruled out by purity? Meaning that it can not be represented by a pure function
+What is ruled out by purity? The following can not be represented by pure functions:
 
 - Every side effect, basically.
 - Mutable variables
@@ -156,7 +156,7 @@ See also
 
 ---
 
-Before implementing the `ask` function, we need to understand a little better this `IO` type.
+Before implementing the `ask` function, we need to understand this `IO` type a little better .
 
 ---
 
@@ -170,7 +170,7 @@ getLine :: IO String
 
 ---
 
-Code in the `IO` context is by nature imperative. Haskell has a special notation to write sequential code, introduced by the [`do` keyword](https://en.m.wikibooks.org/wiki/Haskell/Simple_input_and_output)
+Code in the `IO` context is by nature impure. As a result, the order in which operations are executed matters, just like in imperative languages. Haskell has a special notation to write sequential code, introduced by the [`do` keyword](https://en.m.wikibooks.org/wiki/Haskell/Simple_input_and_output)
 
 ```haskell
 foo :: a -> IO b
@@ -182,7 +182,7 @@ foo x = do
 
 ---
 
-Notice that `do` notation is just syntactic sugar. There's no real value in it, it only makes the code cuter.
+The `do` notation is just syntactic sugar. There's no real value in it, it only makes the code cuter.
 
 The code we write above we could have actually written as
 
@@ -498,7 +498,7 @@ See [here](https://kowainik.github.io/posts/deriving) for more details
 
 ---
 
-I need to mention that `Show` should actually be used basically only for debugging. If you need pretty printing to show data to your users, probably `Show` is not what you're looking for.
+I need to mention that `Show` should only be used for debugging. If you need to show data to users, a pretty-printing library would be more appropriate.
 
 ---
 
@@ -585,7 +585,7 @@ main = do
 
 ---
 
-A `String` is defined as a [list of characters](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:String). This makes it easy to manipulate but not particularly performant. As a consequence, it is not recommended for a production project. Use [`Text`](https://hackage.haskell.org/package/text-2.0/docs/Data-Text.html#t:Text) instead, which provides a similar API but is optimized for better performance.
+A `String` is defined as a [list of characters](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:String). This makes it easy to manipulate but not particularly performant. As a consequence, it is not recommended for usage in production. Use [`Text`](https://hackage.haskell.org/package/text-2.0/docs/Data-Text.html#t:Text) instead, which provides a similar API but is optimized for better performance.
 
 See also:
 - https://www.fpcomplete.com/haskell/tutorial/string-types/
@@ -599,7 +599,7 @@ Let's then refactor our code to use `Text` instead of `String`.
 
 ---
 
-We need to first import the `Text` type:
+We first need to import the `Text` type:
 
 ```haskell
 -- text
@@ -617,7 +617,7 @@ dependencies:
 
 ---
 
-We also need to change all the `IO` functions which generally work with `String`s with their corresponding version using `Text`, which can be found in the `Data.Text.IO` module.
+We also need to change all the `IO` functions which generally work with `String`s to their counterparts for `Text`, which can be found in the `Data.Text.IO` module.
 
 ```haskell
 import qualified Data.Text.IO as Text
@@ -646,7 +646,7 @@ We could solve this by enabling the `OverloadedStrings` extension. One way to do
 
 ---
 
-[Extensions](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/intro.html) are a mechanism to actually modify the language behavior. They are basically feature flags for the compiler.
+[Extensions](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/intro.html) are a mechanism to opt into (or out of) different language behaviours. They are basically feature flags for the compiler.
 
 ---
 ## Learned concepts
