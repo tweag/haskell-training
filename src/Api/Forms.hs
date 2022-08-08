@@ -3,17 +3,22 @@
 
 module Api.Forms where
 
+import Domain.Answer
+import Domain.Id
+import Domain.Question
+import Domain.Questionnaire
+
 -- servant
 import Servant.API
 import Servant.API.Generic
 
--- data FormsApi mode = FormsApi
---   { createNewQuestionnaire :: mode :- "create-questionnaire" :> ReqBody '[JSON] Questionnaire :> Post '[JSON] (Id Questionnaire)
---   , questionnaires         :: mode :- _
---   , addNewQuestion         :: mode :- _
---   , questionnaireQuestions :: mode :- _
---   , recordAnswerSet        :: mode :- _
---   , answerSets             :: mode :- _
---   , setIdAnswers           :: mode :- _
---   , questionAnswers        :: mode :- _
---   }
+data FormsApi mode = FormsApi
+  { createNewQuestionnaire :: mode :- "create-questionnaire" :> ReqBody '[JSON] Questionnaire              :> Post '[JSON] (Id Questionnaire)
+  , questionnaires         :: mode :- "questionnaires"                                                     :> Get  '[JSON] [Identified Questionnaire]
+  , addNewQuestion         :: mode :- "add-question"         :> ReqBody '[JSON] Question                   :> Post '[JSON] (Id Question)
+  , questionnaireQuestions :: mode :- "questions"            :> Capture "questionnaire" (Id Questionnaire) :> Get  '[JSON] [Identified Question]
+  , recordAnswerSet        :: mode :- "record-answer-set"    :> ReqBody '[JSON] [Answer]                   :> Post '[JSON] (Id AnswerSet)
+  , answerSets             :: mode :- "answer-sets"          :> Capture "questionnaire" (Id Questionnaire) :> Get  '[JSON] [Id AnswerSet]
+  , setIdAnswers           :: mode :- "set-answers"          :> Capture "set" (Id AnswerSet)               :> Get  '[JSON] [Identified Answer]
+  , questionAnswers        :: mode :- "question-answers"     :> Capture "question" (Id Question)           :> Get  '[JSON] [Identified Answer]
+  }
