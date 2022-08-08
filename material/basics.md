@@ -99,6 +99,14 @@ Bool -> Bool
 
 ---
 
+This is the same as
+
+```
+> f = \x -> x && x
+```
+
+---
+
 And we can apply functions to values
 
 ```

@@ -107,7 +107,7 @@ What exactly does `purity` mean?
 
 An expression is said to be [`referentially transparent`](https://www.wikiwand.com/en/Referential_transparency) if it can be replaced with its corresponding value without changing the program's behavior.
 
-For example, `42 * 42 == 42 * 40 + 42 * 2` could be replaced anywhere with `True` without changing the sematics of the program.
+For example, `42 * 42 == 42 * 40 + 42 * 2` could be replaced anywhere with `True` without changing the semantics of the program.
 
 ---
 
@@ -157,7 +157,7 @@ See also
 
 ---
 
-Before implementing the `ask` function, we need to understand this `IO` type a little better .
+Before implementing the `ask` function, we need to understand this `IO` type a little better.
 
 ---
 
@@ -653,7 +653,7 @@ Actually Haskell could add all the `fromString` for us! We can do this by enabli
 
 ---
 
-[Extensions](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/intro.html) are a mechanism to opt into (or out of) different language behaviours. They are basically feature flags for the compiler.
+[Extensions](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/intro.html) are a mechanism to opt into (or out of) different language behaviors. They are basically feature flags for the compiler.
 
 ---
 ## Learned concepts
