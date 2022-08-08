@@ -12,7 +12,7 @@ stack ghci
 
 ---
 
-As a functional programming language, Haskell is based on [expressions](https://en.wikipedia.org/wiki/Expression_(mathematics)) rather than statements. While statements instruct the compiler what to do, expressions describe what we want.
+As a functional programming language, Haskell is based on [expressions](https://en.wikipedia.org/wiki/Expression_(mathematics)) rather than statements. While statements instruct the program what to do, expressions are combinations of other expressions which evaluate to a value to describe what we want.
 
 ---
 
@@ -41,6 +41,13 @@ True
 ---
 
 Evaluation of expressions is just simplification, as in mathematical expressions
+
+```
+42 * 42 == 42 * 40 + 42 * 2
+1764 == 1680 + 84
+1764 == 1764
+True
+̀̀```
 
 ---
 
@@ -250,7 +257,7 @@ perimeter (Circle radius)         = 2 * pi * radius
 
 ---
 
-In addition to working with concrete types, such as `Shape`, we can also work with polymorphic functions  (think generics in other languages) where we have type variables instead of concrete types:
+In addition to working with concrete types, such as `Shape`, we can also work with polymorphic functions (think generics in other languages) where we have type variables instead of concrete types:
 
 ```
 > :t (:)
@@ -260,3 +267,26 @@ In addition to working with concrete types, such as `Shape`, we can also work wi
 The signature is telling us that `(:)` allows us to attach a new element of type `a` to a list of elements of type `a`, for any possible type `a`.
 
 Concrete types always start with a capital letter, type variables always start with a lowercase character.
+
+---
+
+We can also define our own polymorphic data structures
+
+```haskell
+data Foo a b c = MkFoo
+  { bar :: a
+  , baz :: b -> c
+  }
+```
+
+---
+
+Whenever there is a polymorphic data structure, the caller has the freedom to decide the value of the type variables
+
+```haskell
+foo :: Foo Int Char String
+foo = MkFoo
+  { bar = 42
+  , baz = \char -> [char]
+  }
+```
