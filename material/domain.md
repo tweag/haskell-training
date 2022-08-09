@@ -97,6 +97,8 @@ We want to obtain an `Answer` from a `Question`. We could use a function to mode
 ask :: Question -> Answer
 ```
 
+Take a minute to try to implement this function.
+
 ---
 
 Beware, all functions in Haskell are pure! Does this mean that we need to define the answer to our questions at compile time? Not a friendly user interaction...
@@ -138,6 +140,8 @@ What is ruled out by purity? The following can not be represented by pure functi
 - system interactions
 - random values generation
 - ...
+
+This does not mean that these things are impossible in Haskell.
 
 ---
 
@@ -356,7 +360,7 @@ parseInt = readEither
 
 ---
 
-Applying `parseInt` to `answer` we can now distinguish the cases where `answer` contains an integer of does not
+Applying `parseInt` to `answer` we can now distinguish the cases where `answer` contains an integer or does not
 
 ```haskell
 ask :: Question -> IO Answer
