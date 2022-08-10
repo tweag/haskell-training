@@ -83,6 +83,8 @@ We are defining the `Answer` type, with two constructors `ParagraphAnswer` and `
 
 ---
 
+---
+
 Now we have an extremely basic model for our domain.
 
 Next we want to try interacting with the user, asking them a question and letting them reply with an answer.
@@ -527,6 +529,8 @@ stack exec forms
 
 ---
 
+---
+
 Next, we want to be able to ask multiple questions one after the other
 
 ```haskell
@@ -587,6 +591,8 @@ main = do
   answers <- askMultiple [whatIsYourName, howOldAreYou]
   print answers
 ```
+
+---
 
 ---
 
