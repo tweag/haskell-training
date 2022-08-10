@@ -170,6 +170,8 @@ And now we can use `Id AnswerSet`
 
 ---
 
+---
+
 Now that we completed defining our entities, we want to get back to the definition of the API.
 
 We want to encode all the information regarding our API in a single Haskell data type!
@@ -358,6 +360,8 @@ We can then use it in our API definition.
 
 ---
 
+---
+
 Next, since we want to use `JSON` as our API language, we want to be able to encode to/decode from `JSON` all our domain entities.
 
 To do this we will use the `aeson` library
@@ -373,7 +377,7 @@ We'll take a look at the decoding phase.
 
 ---
 
-The ability to decode a data type from JSON in encoded in the [`FromJSON`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#t:FromJSON) typeclass
+The ability to decode a data type from JSON is encoded in the [`FromJSON`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#t:FromJSON) typeclass
 
 ```haskell
 class FromJSON a where
@@ -719,6 +723,8 @@ newtype Questionnaire = Questionnaire
 
 ---
 
+---
+
 At this point, we can generate the [OpenApi](https://www.openapis.org/) documentation for our API.
 
 ---
@@ -832,9 +838,109 @@ stack exec openapi > openapi.json
 
 ---
 
+---
+
 Now we're left with implementing a server which exposes the endpoints we defined above.
 
 ---
+
+We need to implement a server for out API data type
+
+```haskell
+formsServer :: FormsApi AsServer
+formsServer = FormsApi
+  { createNewQuestionnaire = _
+  , questionnaires         = _
+  , addNewQuestion         = _
+  , questionnaireQuestions = _
+  , recordAnswerSet        = _
+  , answerSets             = _
+  , setIdAnswers           = _
+  , questionAnswers        = _
+  }
+```
+
+---
+
+We will use the [Repository pattern](https://www.martinfowler.com/eaaCatalog/repository.html), to mediate between the domain and the persistence layers using collection-like interfaces for accessing and manipulating domain values.
+
+It will be our interface to access and interact with the domain. It also allows defining multiple implementations (e.g. one for production and one for testing)
+
+---
+
+Let's start by creating a repository for `Questionnaire`s
+
+```haskell
+module Domain.QuestionnaireRepository where
+
+data QuestionnaireRepository = QuestionnaireRepository
+  {
+  }
+```
+
+---
+
+We need to look at the endpoints to know which actions we actually need in the repository.
+
+The first two endpoints are dealing with `Questionnaire`.
+
+They have type
+
+```haskell
+createNewQuestionnaire :: Questionnaire -> Handler (Id Questionnaire)
+
+questionnaires :: Handler [Identified Questionnaire]
+```
+
+where [`Handler`](https://hackage.haskell.org/package/servant-server-0.19.1/docs/Servant-Server.html#t:Handler) is the context used by `Servant` to write endpoint handlers.
+
+---
+
+Hence, we need two methods in our repository to add a new `Questionnaire` and to retrieve all `Questionnaire`s.
+
+```haskell
+data QuestionnaireRepository = QuestionnaireRepository
+  { add :: _
+  , all :: _
+  }
+```
+
+---
+
+To remain detached from implementation details and allow for multiple implementations (e.g. production and testing) we will abstract over the context where we will operate.
+
+Therefore, we add the context as a type variable to our repository
+
+```haskell
+import Domain.Id
+import Domain.Questionnaire
+
+data QuestionnaireRepository m = QuestionnaireRepository
+  { add :: Questionnaire -> m (Id Questionnaire)
+  , all :: m [Identified Questionnaire]
+  }
+```
+
+---
+
+At this point it is easy to implement the two first endpoints
+
+```haskell
+import Domain.QuestionnaireRepository
+
+-- servant-server
+import Servant.Server
+
+formsServer :: QuestionnaireRepository Handler -> FormsApi AsServer
+formsServer (QuestionnaireRepository addQuestionnaire allQuestionnaires) = FormsApi
+  { createNewQuestionnaire = addQuestionnaire
+  , questionnaires         = allQuestionnaires
+  , ...
+  }
+
+
+
+
 
 
 
