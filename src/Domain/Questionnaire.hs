@@ -1,10 +1,17 @@
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Questionnaire where
 
 -- aeson
-import Data.Aeson
+import Data.Aeson.Types
+
+-- base
+import GHC.Generics
+
+-- openapi3
+import Data.OpenApi
 
 -- text
 import Data.Text
@@ -12,7 +19,5 @@ import Data.Text
 newtype Questionnaire = Questionnaire
   { title :: Text
   }
-
-instance ToJSON Questionnaire where
-  toJSON :: Questionnaire -> Value
-  toJSON (Questionnaire title) = object ["title" .= title]
+  deriving stock Generic
+  deriving anyclass (FromJSON, ToJSON, ToSchema)

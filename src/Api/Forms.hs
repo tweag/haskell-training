@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Api.Forms where
@@ -7,6 +8,9 @@ import Domain.Answer
 import Domain.Id
 import Domain.Question
 import Domain.Questionnaire
+
+-- base
+import GHC.Generics
 
 -- servant
 import Servant.API
@@ -22,3 +26,4 @@ data FormsApi mode = FormsApi
   , setIdAnswers           :: mode :- "set-answers"          :> Capture "set" (Id AnswerSet)               :> Get  '[JSON] [Identified Answer]
   , questionAnswers        :: mode :- "question-answers"     :> Capture "question" (Id Question)           :> Get  '[JSON] [Identified Answer]
   }
+  deriving Generic

@@ -137,7 +137,7 @@ newtype QuestionId = QuestionId UUID
 
 All these similarly defined `Id`s really call for a refactoring unifying them in a single type.
 
-Still, we want to keep them distinct at the type level.
+Still, we want to keep them distinct at the type level. This way, the type system will help us avoid any confusion among them.
 
 We could use a [phantom type](https://wiki.haskell.org/Phantom_type), a type variable which is not referring to anything at the value level
 
@@ -237,6 +237,8 @@ data FormsApi mode = FormsApi
   , questionAnswers        :: mode :- _
   }
 ```
+
+It will be used to specify is the API definition needs to be used for a server (that's our use case), a client, or something else.
 
 ---
 
@@ -366,6 +368,487 @@ dependencies:
 ```
 
 ---
+
+We'll take a look at the decoding phase.
+
+---
+
+The ability to decode a data type from JSON in encoded in the [`FromJSON`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#t:FromJSON) typeclass
+
+```haskell
+class FromJSON a where
+  parseJSON :: Value -> Parser a
+```
+
+where `Value` is a data type representing a `JSON` value
+
+```haskell
+data Value
+  = Object Object
+  | Array Array
+  | String Text
+  | Number Scientific
+  | Bool Bool
+  | Null
+```
+
+and [`Parser a`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#t:Parser) is the result of the parsing operation, which, if successful, returns a value of type `a`.
+
+---
+
+Let's try to decode a `Questionnaire`, first
+
+```haskell
+{-# LANGUAGE InstanceSigs #-}
+
+-- aeson
+import Data.Aeson.Types
+
+instance FromJSON Questionnaire where
+  parseJSON :: Value -> Parser Questionnaire
+  parseJSON v = _
+```
+
+---
+
+The first step is case splitting on the input `Value`
+
+```haskell
+instance FromJSON Questionnaire where
+  parseJSON :: Value -> Parser Questionnaire
+  parseJSON (Object o) = _wa
+  parseJSON (Array a)  = _wb
+  parseJSON (String s) = _wc
+  parseJSON (Number n) = _wd
+  parseJSON (Bool b)   = _we
+  parseJSON Null       = _wf
+```
+
+---
+
+We need to decide now what we want the JSON representation of a `Questionnaire` to be.
+
+I'd say it makes to use an object with a `title` field.
+
+Hence, all other options other than `Object` will need to fail.
+
+The documentation of `FromJSON` describes the [`typeMismatch`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#v:typeMismatch) function exactly for this use case.
+
+```haskell
+instance FromJSON Questionnaire where
+  parseJSON :: Value -> Parser Questionnaire
+  parseJSON (Object o) = _wa
+  parseJSON v          = typeMismatch "object" v
+```
+
+---
+
+We can parse an object field with the [`.:`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#v:.:) operator
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+  parseJSON (Object o) = _ (o .: "title" :: Parser Text)
+```
+
+We specify the type explicitly to avoid excessive polymorphism until we are not done with the implementation.
+
+---
+
+The hole now has type `Parser Text -> Parser Questionnaire`.
+
+We can look at this as a map from `Text` to `Questionnaire` inside the `Parser` context.
+
+---
+
+We actually have a map from `Text` to `Questionnaire`, which is the `Questionnaire` constructor.
+
+We need a way to lift it to the `Parser` context.
+
+---
+
+Haskell has a default mechanism to lift functions into contexts, and it is provided by the `Functor` type class
+
+```haskell
+class Functor f where
+  fmap :: (a -> b) -> f a -> f b
+```
+
+---
+
+A `Functor` instance on a type constructor `f` means that we can take any function `g :: a -> b` and see it inside the context given by `f` as a function `fmap g :: f a -> f b`
+
+---
+
+It's better mention that there is also an infix version of `fmap`, which is the `<$>` operator
+
+```haskell
+(<$>) :: (a -> b) -> f a -> f b
+
+-- compare it to
+($)   :: (a -> b) ->   a ->   b
+```
+
+---
+
+Now we can complete our definition for the `FromJSON Questionnaire` instance
+
+```haskell
+  parseJSON (Object o) = Questionnaire <$> o .: "title"
+```
+
+---
+
+Next we would like to create an instance for `FromJSON Question`
+
+```haskell
+{-# LANGUAGE InstanceSigs #-}
+
+--aeson
+import Data.Aeson.Types
+
+instance FromJSON Question where
+  parseJSON :: Value -> Parser Question
+  parseJSON v = _
+```
+
+---
+
+Also in this case we want an object, so we can consider only that case
+
+```haskell
+  parseJSON (Object o) = _
+  parseJSON v          = typeMismatch "Object" v
+```
+
+---
+
+Similarly to what we did above, we want to parse first all the single fields and then combine them into the `Question` data type.
+
+```haskell
+  parseJSON (Object o) = _
+    (o .: "title" :: Parser Text)
+    (o .: "answer-type" :: Parser AnswerType)
+    (o .: "questionnaire-id" :: Parser (Id Questionnaire))
+```
+
+---
+
+To make this work we need first to have `FromJSON` instances for `AnswerType` and `Id Questionnaire`.
+
+---
+
+Let's start from the first
+
+```haskell
+instance FromJSON AnswerType where
+  parseJSON :: Value -> Parser AnswerType
+  parseJSON v = _
+```
+
+---
+
+This time we want the JSON representation to be just a string
+
+```haskell
+  parseJSON (String s) = _wi
+  parseJSON v          = typeMismatch "String" v
+```
+
+---
+
+If the string equals `Number` or `Paragraph`, we return the appropriate value, otherwise we fail
+
+```haskell
+  parseJSON (String s) = case s of
+    "Paragraph" -> pure Paragraph
+    "Number"    -> pure Number
+    _           -> fail "the only allowed values are Paragraph and Number"
+```
+
+Similarly to what we did for `IO`, we need to use the `pure` function to lift a value into the `Parser` context.
+
+---
+
+The instance for `Id Questionnaire` is actually even simpler, since we can use the already present instance for `UUID`
+
+```haskell
+{-# LANGUAGE InstanceSigs #-}
+
+-- aeson
+import Data.Aeson.Types
+
+instance FromJSON (Id a) where
+  parseJSON :: Value -> Parser (Id a)
+  parseJSON v = Id <$> parseJSON v
+```
+
+---
+
+Let's go back to our `FromJSON Question` instance
+
+```haskell
+  parseJSON (Object o) = _
+    (o .: "title" :: Parser Text)
+    (o .: "answer-type" :: Parser AnswerType)
+    (o .: "questionnaire-id" :: Parser (Id Questionnaire))
+```
+
+The hole has type `Parser Text -> Parser AnswerType -> Parser (Id Questionnaire) -> Parser Question`
+
+---
+
+Similarly to what we did for `Questionnaire`, we can see this as a function `Text -> AnswerType -> Id Questionnaire -> Question` inside the `Parser` context.
+
+We actually already have a `Text -> AnswerType -> Id Questionnaire -> Question`, which is the `Question` constructor.
+
+What we would like to do is to lift it to the `Parser` context.
+
+---
+
+Previously we used a `Functor`. Does it work now?
+
+Unluckily, it falls short
+
+```haskell
+f :: a -> b -> c -> d
+fa :: f a
+f <$> fa :: f (b -> c -> d)
+```
+
+---
+
+To be able to lift functions of higher [arity](https://en.wikipedia.org/wiki/Arity) (i.e. with more arguments) we need something more powerful than `Functor`.
+
+We need `Applicative`
+
+```haskell
+class Applicative f where
+  pure  :: a -> f a
+  (<*>) :: f (a -> b) -> f a -> f b
+```
+
+Aha, here is where the `pure` lifting operation we were using comes from!
+
+---
+
+We are now interested in understanding how the `<*>` operator could be helpful.
+
+It works like function application, but in a given context `f`
+
+```haskell
+(<*>) :: f (a -> b) -> f a -> f b
+
+-- compare it to
+($)   ::   (a -> b) ->   a ->   b
+```
+
+---
+
+Notice that is consumes a function type `f (a -> b)` and returns a simpler type `f b`.
+
+We can actually use it to simplify the `f <$> fa :: f (b -> c -> d)` we had above
+
+```haskell
+f :: a -> b -> c -> d
+fa :: f a
+f <$> fa :: f (b -> c -> d)
+
+<*> :: f (b -> c -> d) -> f b -> f (c -> d)
+
+fb :: f b
+f <$> fa <*> fb :: f (c -> d)
+
+fc :: f c
+f <$> fa <*> fb <*> fc :: f d
+```
+
+---
+
+To sum up, we can use `<$>` and `<*>` to lift a function of any arity into an `Applicative` context.
+
+Exercise: try to write a `lift3 :: (a -> b -> c -> d) -> f a -> f b -> f c -> f d` function in terms of `<$>` and `<*>`.
+
+---
+
+This allows us to complete the parser for `Question`.
+
+```haskell
+  parseJSON (Object o) = Question
+    <$> (o .: "title" :: Parser Text)
+    <*> (o .: "answer-type" :: Parser AnswerType)
+    <*> (o .: "questionnaire-id" :: Parser (Id Questionnaire))
+```
+
+---
+
+After all this hard work, a bad news: Haskell could generate all these instances for us!
+
+---
+
+We can use [`Generic` programming](https://www.youtube.com/watch?v=pwnrfREbhWY) to derive `FromJSON` instances.
+
+```haskell
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+
+-- base
+import GHC.Generics
+
+newtype Questionnaire = Questionnaire
+  { title :: Text
+  }
+  deriving stock Generic
+  deriving anyclass FromJSON
+```
+
+and similarly for other data types.
+
+---
+
+Similarly, we can derive instances also for encoding data types to `JSON`
+
+```haskell
+newtype Questionnaire = Questionnaire
+  { title :: Text
+  }
+  deriving stock Generic
+  deriving anyclass (FromJSON, ToJSON)
+```
+
+---
+
+At this point, we can generate the [OpenApi](https://www.openapis.org/) documentation for our API.
+
+---
+
+We need to add a new executable in `package.yaml`
+
+```yaml
+  openapi:
+    source-dirs:    openapi
+    main:           Main.hs
+    dependencies:
+      - haskell-training
+      - aeson-pretty
+      - bytestring
+      - servant-openapi3
+```
+
+---
+
+Add some little code to `openapi/Main.hs`
+
+```haskell
+module Main where
+
+import Api.Forms
+
+-- aeson-pretty
+import Data.Aeson.Encode.Pretty
+
+-- base
+import Data.Proxy
+
+-- bytestring
+import qualified Data.ByteString.Lazy.Char8 as BL8
+
+-- servant
+import Servant.API
+
+-- servant-openapi3
+import Servant.OpenApi
+
+main :: IO ()
+main = do
+  BL8.putStrLn . encodePretty $ toOpenApi (Proxy :: Proxy (NamedRoutes FormsApi))
+```
+
+---
+
+Deriving a `Generic` instance for our API definition
+
+```haskell
+{-# LANGUAGE DeriveGeneric #-}
+
+-- base
+import GHC.Generics
+
+data FormsApi mode = FormsApi
+  { ...
+  }
+  deriving Generic
+```
+
+---
+
+Add `openapi3` package to our dependencies
+
+```yaml
+dependencies:
+  - openapi3
+```
+
+---
+
+And deriving `ToSchema` instances for our data types.
+
+```haskell
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+
+-- base
+import GHC.Generics
+
+-- openapi3
+import Data.OpenApi
+
+newtype Questionnaire = Questionnaire
+  { title :: Text
+  }
+  deriving stock Generic
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+```
+
+---
+
+And a `ToParamSchema` instance for `Id`
+
+```haskell
+newtype Id a = Id UUID
+  deriving stock Generic
+  deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
+```
+
+---
+
+Now we can generate the actual documentation
+
+```bash
+stack exec openapi > openapi.json
+```
+
+---
+
+Now we're left with implementing a server which exposes the endpoints we defined above.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 To encode our data types into `JSON` we will need to implement instances of the `ToJSON` typeclass.
 

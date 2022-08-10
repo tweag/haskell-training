@@ -1,5 +1,6 @@
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Question where
 
@@ -7,7 +8,13 @@ import Domain.Id
 import Domain.Questionnaire
 
 -- aeson
-import Data.Aeson hiding (Number)
+import Data.Aeson.Types
+
+-- base
+import GHC.Generics
+
+-- openapi3
+import Data.OpenApi
 
 -- text
 import Data.Text
@@ -18,11 +25,8 @@ import Data.UUID
 data AnswerType
   = Paragraph
   | Number
-
-instance ToJSON AnswerType where
-  toJSON :: AnswerType -> Value
-  toJSON Paragraph = "Paragraph"
-  toJSON Number    = "Number"
+  deriving stock Generic
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 newtype QuestionnaireId = QuestionnaireId UUID
 
@@ -31,11 +35,5 @@ data Question = Question
   , answerType :: AnswerType
   , questionnaireId :: Id Questionnaire
   }
-
-instance ToJSON Question where
-  toJSON :: Question -> Value
-  toJSON (Question title answerType questionnaireId) = object
-    [ "title"           .= title
-    , "answerType"      .= answerType
-    , "questionnaireId" .= questionnaireId
-    ]
+  deriving stock Generic
+  deriving anyclass (FromJSON, ToJSON, ToSchema)

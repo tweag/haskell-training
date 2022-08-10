@@ -16,6 +16,7 @@ dependencies:
   #- extra
   #- hasql
   #- mtl
+  - openapi3
   #- rel8
   #- semigroupoids
   - servant
@@ -42,3 +43,12 @@ executables:
       - haskell-training
       #- bytestring
       #- hasql
+
+  openapi:
+    source-dirs:    openapi
+    main:           Main.hs
+    dependencies:
+      - haskell-training
+      - aeson-pretty
+      - bytestring
+      - servant-openapi3
