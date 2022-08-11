@@ -78,7 +78,7 @@ data AnswerType
 For the `QuestionnaireId` we want to use a `UUID` using a newtype to distinguish it from other `id`s.
 
 ```haskell
---uuid
+-- uuid
 import Data.UUID
 
 newtype QuestionnaireId = QuestionnaireId UUID
@@ -178,9 +178,9 @@ We want to encode all the information regarding our API in a single Haskell data
 
 This is work for the awesome [`Servant`](https://hackage.haskell.org/package/servant-0.19) library.
 
-Servant is a Haskell library to define web services API and serving them.
+Servant is a Haskell library used to define web services API and serving them.
 
-Warning: Servant internals are complicated! We will not dive into the details.
+Warning: Servant internals are complicated! We will not dive into the details. We'll just learn how to use it.
 
 ---
 
@@ -225,7 +225,7 @@ Mind that the holes do not work at the type level. It's just a placeholder for u
 
 ---
 
-Now it's time for the first Servant technicality. To make the machinery work, the `FormsApi` data type needs a `mode` type variable which is then used on every route
+Now it's time for a Servant technicality. To make the machinery work, the `FormsApi` data type needs a `mode` type variable which is then used on every route
 
 ```haskell
 data FormsApi mode = FormsApi
@@ -285,7 +285,7 @@ Now we want to define the endpoint to retrieve all questionnaires
 ```haskell
 data FormsApi mode = FormsApi
   { ...
-  , questionnaires :: mode :- "questionnaires" :> Get  '[JSON] [(Id Questionnaire, Questionnaire)]
+  , questionnaires :: mode :- "questionnaires" :> Get '[JSON] [(Id Questionnaire, Questionnaire)]
   , ...
   }
 ```
@@ -432,7 +432,7 @@ instance FromJSON Questionnaire where
 
 We need to decide now what we want the JSON representation of a `Questionnaire` to be.
 
-I'd say it makes to use an object with a `title` field.
+I'd say it makes sense to use an object with a `title` field.
 
 Hence, all other options other than `Object` will need to fail.
 
@@ -937,6 +937,8 @@ formsServer (QuestionnaireRepository addQuestionnaire allQuestionnaires) = Forms
   , questionnaires         = allQuestionnaires
   , ...
   }
+
+---
 
 
 
