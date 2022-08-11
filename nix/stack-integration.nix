@@ -1,6 +1,6 @@
 # from https://www.tweag.io/blog/2022-06-02-haskell-stack-nix-shell/
 let
-  sources = import ./nix/source.nix
+  sources = import ./source.nix;
   pkgs = sources.nixpkgs;
 in
 
