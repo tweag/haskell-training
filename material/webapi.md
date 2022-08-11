@@ -940,217 +940,113 @@ formsServer (QuestionnaireRepository addQuestionnaire allQuestionnaires) = Forms
 
 ---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-To encode our data types into `JSON` we will need to implement instances of the `ToJSON` typeclass.
-
-```
-class ToJSON a where
-  toJSON :: a -> Value
-```
-
-where `Value` is a data type representing a `JSON` value
+Similarly, we can create the other repositories for the other entities, following the lead of our endpoints
 
 ```haskell
-data Value
-  = Object Object
-  | Array Array
-  | String Text
-  | Number Scientific
-  | Bool Bool
-  | Null
+module Domain.QuestionRepository where
+
+import Domain.Id
+import Domain.Question
+import Domain.Questionnaire
+
+data QuestionRepository m = QuestionRepository
+  { add                 :: Question         -> m (Id Question)
+  , allForQuestionnaire :: Id Questionnaire -> m [Identified Question]
+  }
+```
+
+```haskell
+module Domain.AnswerSetRepository where
+
+import Domain.Answer
+import Domain.Id
+import Domain.Questionnaire
+
+data AnswerSetRepository m = AnswerSetRepository
+  { record              :: [Answer]         -> m (Id AnswerSet)
+  , allForQuestionnaire :: Id Questionnaire -> m [Id AnswerSet]
+  }
+```
+
+```haskell
+module Domain.AnswerRepository where
+
+import Domain.Answer
+import Domain.Id
+import Domain.Question
+
+data AnswerRepository m = AnswerRepository
+  { allForSet      :: Id AnswerSet -> m [Identified Answer]
+  , allForQuestion :: Id Question  -> m [Identified Answer]
+  }
 ```
 
 ---
 
-Let's start with `Questionnaire`
+And we can use them to implement our API
 
 ```haskell
-{-# LANGUAGE InstanceSigs #-} -- allows us to write signature in instance declarations
-
--- aeson
-import Data.Aeson
-
-instance ToJSON Questionnaire where
-  toJSON :: Questionnaire -> Value
-  toJSON (Questionnaire title) = _
+formsServer
+  :: QuestionnaireRepository Handler
+  -> QuestionRepository Handler
+  -> AnswerSetRepository Handler
+  -> AnswerRepository Handler
+  -> FormsApi AsServer
+formsServer questionnaireRepository questionRepository answerSetRepository answerRepository = FormsApi
+  { createNewQuestionnaire = Questionnaire.add             questionnaireRepository
+  , questionnaires         = Questionnaire.all             questionnaireRepository
+  , addNewQuestion         = Question.add                  questionRepository
+  , questionnaireQuestions = Question.allForQuestionnaire  questionRepository
+  , recordAnswerSet        = AnswerSet.record              answerSetRepository
+  , answerSets             = AnswerSet.allForQuestionnaire answerSetRepository
+  , setIdAnswers           = Answer.allForSet              answerRepository
+  , questionAnswers        = Answer.allForQuestion         answerRepository
+  }
 ```
 
 ---
 
-We need to choose now how we want to represent out data type in `JSON`.
+---
 
-I would say that an object is the best choice here.
-
-The `aeson` library is exporting a `object` constructor for a `Value`
+If we want, we could group all our dependencies into a single type
 
 ```haskell
-  toJSON (Questionnaire title) = object _
+module Api.AppServices where
+
+import Domain.AnswerRepository
+import Domain.AnswerSetRepository
+import Domain.QuestionnaireRepository
+import Domain.QuestionRepository
+
+-- servant-server
+import Servant
+
+data AppServices = AppServices
+  { questionnaireRepository :: QuestionnaireRepository Handler
+  , questionRepository      :: QuestionRepository Handler
+  , answerSetRepository     :: AnswerSetRepository Handler
+  , answerRepository        :: AnswerRepository Handler
+  }
 ```
 
 ---
 
-The remaining hole has type `[Pair]`.
-
-A `Pair` is defined using the `.=` operator, which requires the name of the key and the actual value
+And use to simply our server definition a bit
 
 ```haskell
-  toJSON (Questionnaire title) = object [_ .= _]
-```
+import Api.AppServices
 
----
-
-Let's use `"title"` as the key in the `JSON` representation.
-
-We need to turn on the `OverloadedStrings` extension.
-
-```haskell
-{-# LANGUAGE OverloadedStrings #-}
-
-  toJSON (Questionnaire title) = object ["title" .= _]
-```
-
----
-
-Last thing to fill in is the actual value, and we have basically no other possibility that to use `title`
-
-```haskell
-{-# LANGUAGE OverloadedStrings #-}
-
-  toJSON (Questionnaire title) = object ["title" .= title]
-```
-
----
-
-Let's try now to define a `ToJSON` instance for `Question`.
-
-We can start out similarly to what we did for `Questionnaire`.
-
-```haskell
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE OverloadedStrings #-}
-
--- aeson
-import Data.Aeson
-
-instance ToJSON Question where
-  toJSON :: Question -> Value
-  toJSON (Question title answerType questionnaireId) = object
-    [ "title"           .= title
-    , "answerType"      .= _
-    , "questionnaireId" .= _
-    ]
-```
-
----
-
-We now need to decide how we want to encode `AnswerType` and `Id Questionnaire` to `JSON`.
-
-Let's start from `Id Questionnaire`.
-
----
-
-What we're actually going to do is define how to encode any `Id a` to `JSON`, since `a` is not considered in the runtime representation.
-
-```haskell
--- aeson
-import Data.Aeson
-
-instance ToJSON (Id a) where
-  toJSON (Id uuid) = toJSON uuid
-```
-
-We simply use the already defined encoding of the underlying runtime type.
-
----
-
-We can now use
-
-```haskell
-    , "questionnaireId" .= questionnaireId
-```
-
-in the `ToJSON Question` instance.
-
----
-
-We are left with defining a `ToJSON AnswerType` instance.
-
-One easy option is to just encode it to strings.
-
-```haskell
-instance ToJSON AnswerType where
-  toJSON :: AnswerType -> Value
-  toJSON Paragraph = "Paragraph"
-  toJSON Number    = "Number"
-```
-
----
-
-We can then use it and complete our `ToJSON Question` instance
-
-```haskell
-instance ToJSON Question where
-  toJSON :: Question -> Value
-  toJSON (Question title answerType questionnaireId) = object
-    [ "title"           .= title
-    , "answerType"      .= answerType
-    , "questionnaireId" .= questionnaireId
-    ]
-```
-
----
-
-Lastly try to similarly define a `ToJSON Answer` instance.
-
-```haskell
-instance ToJSON Answer where
-  toJSON :: Answer -> Value
-  toJSON (Answer content setId questionId) = object
-    [ "content"    .= content
-    , "setId"      .= setId
-    , "questionId" .= questionId
-    ]
-```
-
----
-
-What is left is an instance for `ToJSON Content`.
-
-`JSON` has no direct support for algebraic data types, so we need to find a way to represent them with what we have
-
----
-
-One way is to use an object with a `"tag"` field, to distinguish between the cases.
-
-```haskell
-import qualified Domain.Question as Question (AnswerType(..))
-import Domain.Question hiding (Paragraph, Number)
-
-instance ToJSON Content where
-  toJSON :: Content -> Value
-  toJSON (Paragraph t) = object
-    [ "tag"   .= Question.Paragraph
-    , "value" .= t
-    ]
-  toJSON (Number i) = object
-    [ "tag"   .= Question.Number
-    , "value" .= i
-    ]
+formsServer
+  :: AppServices
+  -> FormsApi AsServer
+formsServer (AppServices questionnaireRepository questionRepository answerSetRepository answerRepository) = FormsApi
+  { createNewQuestionnaire = Questionnaire.add             questionnaireRepository
+  , questionnaires         = Questionnaire.all             questionnaireRepository
+  , addNewQuestion         = Question.add                  questionRepository
+  , questionnaireQuestions = Question.allForQuestionnaire  questionRepository
+  , recordAnswerSet        = AnswerSet.record              answerSetRepository
+  , answerSets             = AnswerSet.allForQuestionnaire answerSetRepository
+  , setIdAnswers           = Answer.allForSet              answerRepository
+  , questionAnswers        = Answer.allForQuestion         answerRepository
+  }
 ```

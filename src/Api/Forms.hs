@@ -4,11 +4,16 @@
 
 module Api.Forms where
 
+
+import Api.AppServices
 import Domain.Answer
+import Domain.AnswerRepository as Answer
+import Domain.AnswerSetRepository as AnswerSet
 import Domain.Id
 import Domain.Question
+import Domain.QuestionRepository as Question
 import Domain.Questionnaire
-import Domain.QuestionnaireRepository
+import Domain.QuestionnaireRepository as Questionnaire
 
 -- base
 import GHC.Generics
@@ -33,14 +38,16 @@ data FormsApi mode = FormsApi
   }
   deriving Generic
 
-formsServer :: QuestionnaireRepository Handler -> FormsApi AsServer
-formsServer (QuestionnaireRepository addQuestionnaire allQuestionnaires) = FormsApi
-  { createNewQuestionnaire = addQuestionnaire
-  , questionnaires         = allQuestionnaires
-  , addNewQuestion         = _
-  , questionnaireQuestions = _
-  , recordAnswerSet        = _
-  , answerSets             = _
-  , setIdAnswers           = _
-  , questionAnswers        = _
+formsServer
+  :: AppServices
+  -> FormsApi AsServer
+formsServer (AppServices questionnaireRepository questionRepository answerSetRepository answerRepository) = FormsApi
+  { createNewQuestionnaire = Questionnaire.add             questionnaireRepository
+  , questionnaires         = Questionnaire.all             questionnaireRepository
+  , addNewQuestion         = Question.add                  questionRepository
+  , questionnaireQuestions = Question.allForQuestionnaire  questionRepository
+  , recordAnswerSet        = AnswerSet.record              answerSetRepository
+  , answerSets             = AnswerSet.allForQuestionnaire answerSetRepository
+  , setIdAnswers           = Answer.allForSet              answerRepository
+  , questionAnswers        = Answer.allForQuestion         answerRepository
   }
