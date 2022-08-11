@@ -21,7 +21,7 @@ Let's start to think about the web API endpoints we would like to have:
 
 ---
 
-What we would like to do now is to encode this information in our code, so that we can use to guide our implementation for a server providing these endpoints.
+What we would like to do now is to encode this information in our code, so that we can use it to guide our implementation for a server providing these endpoints.
 
 ---
 
@@ -163,7 +163,7 @@ Actually also `SetId` has the same format, but we don't have a data type we coul
 Well, we can create it, can't we?
 
 ```haskell
-data AnswerSet = AnswerSet
+data AnswerSet
 ```
 
 And now we can use `Id AnswerSet`

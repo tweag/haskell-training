@@ -33,4 +33,4 @@ data Content
   deriving stock Generic
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-data AnswerSet = AnswerSet
+data AnswerSet
