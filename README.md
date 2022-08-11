@@ -4,9 +4,9 @@ Material for a Haskell training course
 
 ## Haskell at work
 
-The course proposes a practical approach to Haskell. The course develops around the creation and evolution of a concrete project. It will contain some theory and a lot of practice. Certain parts of the project will be pre-developed, but the student will have to interact with what's provided and expand upon it.
+The course proposes a practical approach to Haskell, a statically typed purely functional programming language. The course develops around the creation and evolution of a concrete project, highlighting where Haskell can help us to create a safe and maintainable application. It will contain the necessary theory and a lot of practice.
 
-Some more advanced concepts will be introduced (e.g. type-level programming with Servant) but will not be examined in depth.
+The course will introduce some more advanced concepts (e.g. type-level programming with Servant) but it would focus mostly on the day-to-day aspects of the language, which allow a programmer to become productive sooner.
 
 Everything will be developed with the good practices of software engineering in mind.
 
@@ -62,25 +62,28 @@ It adapts well to the principles we stated above since:
 
 ### Outline
 
-- [Domain definition and basic terminal interaction](https://hackmd.io/CiiOhZqPS8CmFJYxrJZSfg)
-- Adding persistence
-  - Postgresql
-  - Rel8
-- Exposing a web API with Servant
-  - Servant
-  - wai
-  - warp
-- Testing
-  - property based testing
-  - doctest
-- Bonus chapter: tooling
-  - static analysis
-  - CI
-- Bonus chapter: advanced type safety (to solve a concrete modelling problem)
-  - GADTs
-  - RankNTypes
-  - Existential types
-  - ...
+* Chapter 1: Basic domain definition and terminal interaction
+    * Haskell syntax and basic terminology
+    * the value of types and purity
+    * IO and side-effects
+  * Chapter 2: Domain refinement and exposing a web API with Servant
+    * defining a domain model guided by types
+    * defining a web API specification using types
+    * how to isolate the domain layer from persistence
+    * functors and applicatives
+  * Chapter 3: Adding persistence with PostgreSQL
+    * describing a database schema in Haskell
+    * writing composable queries
+    * monads and monad transformers
+  * Chapter 4: Testing and tooling
+    * the easiness of writing unit tests
+    * property based testing
+    * doctests
+    * mocks
+  * Bonus chapter: Advanced type safety (to solve a concrete modelling problem)
+    * GADTs
+    * RankNTypes
+    * Existential types
 
 ### Length
 
