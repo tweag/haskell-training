@@ -46,6 +46,16 @@ newtype Questionnaire = Questionnaire
 
 ---
 
+We are going to use a [`newtype`](https://wiki.haskell.org/Newtype). It wraps a single data type to create a different data type with the same runtime representation.
+
+```haskell
+newytpe Age = Age Int
+```
+
+It allows us to enlarge our domain language without incurring in any runtime overhead.
+
+---
+
 Next we want to think about `Question`s.
 
 To add a new question to a `Questionnaire` we actually need the `Question` `title`, `answerType` and `Questionnaire` `id`
@@ -1050,3 +1060,15 @@ formsServer (AppServices questionnaireRepository questionRepository answerSetRep
   , questionAnswers        = Answer.allForQuestion         answerRepository
   }
 ```
+
+# Learned concepts
+
+- `newtype`
+- phantom types
+- `Servant` API definition
+- encountered `TypeOperators` and `DataKinds`
+- `FromJSON` and parsers
+- functors and applicatives
+- `Generic` programming
+- generating `OpenAPI` documentation
+- abstract over a context (higher kinded types)
