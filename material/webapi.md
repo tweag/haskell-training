@@ -39,20 +39,10 @@ module Domain.Questionnaire where
 -- text
 import Data.Text
 
-newtype Questionnaire = Questionnaire
+data Questionnaire = Questionnaire
   { title :: Text
   }
 ```
-
----
-
-We are going to use a [`newtype`](https://wiki.haskell.org/Newtype). It wraps a single data type to create a different data type with the same runtime representation.
-
-```haskell
-newytpe Age = Age Int
-```
-
-It allows us to enlarge our domain language without incurring in any runtime overhead.
 
 ---
 
@@ -93,6 +83,16 @@ import Data.UUID
 
 newtype QuestionnaireId = QuestionnaireId UUID
 ```
+
+---
+
+We are using a [`newtype`](https://wiki.haskell.org/Newtype). It wraps a single data type to create a different data type with the same runtime representation.
+
+```haskell
+newytpe Age = Age Int
+```
+
+It allows us to enlarge our domain language without incurring in any runtime overhead.
 
 ---
 
@@ -250,7 +250,7 @@ data FormsApi mode = FormsApi
   }
 ```
 
-It will be used to specify is the API definition needs to be used for a server (that's our use case), a client, or something else.
+It will be used to specify whether the API definition needs to be used for a server (that's our use case), a client, or something else.
 
 ---
 
@@ -387,7 +387,7 @@ We'll take a look at the decoding phase.
 
 ---
 
-The ability to decode a data type from JSON is encoded in the [`FromJSON`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#t:FromJSON) typeclass
+The ability to decode a data type from JSON is contained in the [`FromJSON`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#t:FromJSON) typeclass
 
 ```haskell
 class FromJSON a where
@@ -452,7 +452,7 @@ The documentation of `FromJSON` describes the [`typeMismatch`](https://hackage.h
 instance FromJSON Questionnaire where
   parseJSON :: Value -> Parser Questionnaire
   parseJSON (Object o) = _wa
-  parseJSON v          = typeMismatch "object" v
+  parseJSON v          = typeMismatch "Object" v
 ```
 
 ---
@@ -494,7 +494,7 @@ A `Functor` instance on a type constructor `f` means that we can take any functi
 
 ---
 
-It's better mention that there is also an infix version of `fmap`, which is the `<$>` operator
+It's worth mentioning that there is also an infix version of `fmap`, which is the `<$>` operator
 
 ```haskell
 (<$>) :: (a -> b) -> f a -> f b
@@ -614,7 +614,7 @@ The hole has type `Parser Text -> Parser AnswerType -> Parser (Id Questionnaire)
 
 Similarly to what we did for `Questionnaire`, we can see this as a function `Text -> AnswerType -> Id Questionnaire -> Question` inside the `Parser` context.
 
-We actually already have a `Text -> AnswerType -> Id Questionnaire -> Question`, which is the `Question` constructor.
+We actually already have a `Text -> AnswerType -> Id Questionnaire -> Question` function, which is the `Question` constructor.
 
 What we would like to do is to lift it to the `Parser` context.
 
@@ -705,7 +705,6 @@ We can use [`Generic` programming](https://www.youtube.com/watch?v=pwnrfREbhWY) 
 ```haskell
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 
 -- base
 import GHC.Generics
@@ -713,8 +712,7 @@ import GHC.Generics
 newtype Questionnaire = Questionnaire
   { title :: Text
   }
-  deriving stock Generic
-  deriving anyclass FromJSON
+  deriving (Generic, FromJSON)
 ```
 
 and similarly for other data types.
@@ -727,123 +725,7 @@ Similarly, we can derive instances also for encoding data types to `JSON`
 newtype Questionnaire = Questionnaire
   { title :: Text
   }
-  deriving stock Generic
-  deriving anyclass (FromJSON, ToJSON)
-```
-
----
-
----
-
-At this point, we can generate the [OpenApi](https://www.openapis.org/) documentation for our API.
-
----
-
-We need to add a new executable in `package.yaml`
-
-```yaml
-  openapi:
-    source-dirs:    openapi
-    main:           Main.hs
-    dependencies:
-      - haskell-training
-      - aeson-pretty
-      - bytestring
-      - servant-openapi3
-```
-
----
-
-Add some little code to `openapi/Main.hs`
-
-```haskell
-module Main where
-
-import Api.Forms
-
--- aeson-pretty
-import Data.Aeson.Encode.Pretty
-
--- base
-import Data.Proxy
-
--- bytestring
-import qualified Data.ByteString.Lazy.Char8 as BL8
-
--- servant
-import Servant.API
-
--- servant-openapi3
-import Servant.OpenApi
-
-main :: IO ()
-main = do
-  BL8.putStrLn . encodePretty $ toOpenApi (Proxy :: Proxy (NamedRoutes FormsApi))
-```
-
----
-
-Deriving a `Generic` instance for our API definition
-
-```haskell
-{-# LANGUAGE DeriveGeneric #-}
-
--- base
-import GHC.Generics
-
-data FormsApi mode = FormsApi
-  { ...
-  }
-  deriving Generic
-```
-
----
-
-Add `openapi3` package to our dependencies
-
-```yaml
-dependencies:
-  - openapi3
-```
-
----
-
-And deriving `ToSchema` instances for our data types.
-
-```haskell
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
-
--- base
-import GHC.Generics
-
--- openapi3
-import Data.OpenApi
-
-newtype Questionnaire = Questionnaire
-  { title :: Text
-  }
-  deriving stock Generic
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-```
-
----
-
-And a `ToParamSchema` instance for `Id`
-
-```haskell
-newtype Id a = Id UUID
-  deriving stock Generic
-  deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
-```
-
----
-
-Now we can generate the actual documentation
-
-```bash
-stack exec openapi > openapi.json
+  deriving (Generic, FromJSON, ToJSON)
 ```
 
 ---
@@ -930,6 +812,8 @@ data QuestionnaireRepository m = QuestionnaireRepository
   , all :: m [Identified Questionnaire]
   }
 ```
+
+This is an abstraction which is quite unique to statically typed functional programming languages, using `higher kinded types`. It is not achievable just by using generics.
 
 ---
 
@@ -1061,6 +945,120 @@ formsServer (AppServices questionnaireRepository questionRepository answerSetRep
   }
 ```
 
+---
+
+---
+
+Having the API described at the type level allows us to generate the [OpenApi](https://www.openapis.org/) documentation for our API.
+
+---
+
+We need to add a new executable in `package.yaml`
+
+```yaml
+  openapi:
+    source-dirs:    openapi
+    main:           Main.hs
+    dependencies:
+      - haskell-training
+      - aeson-pretty
+      - bytestring
+      - servant-openapi3
+```
+
+---
+
+Add some little code to `openapi/Main.hs`
+
+```haskell
+module Main where
+
+import Api.Forms
+
+-- aeson-pretty
+import Data.Aeson.Encode.Pretty
+
+-- base
+import Data.Proxy
+
+-- bytestring
+import qualified Data.ByteString.Lazy.Char8 as BL8
+
+-- servant
+import Servant.API
+
+-- servant-openapi3
+import Servant.OpenApi
+
+main :: IO ()
+main = do
+  BL8.putStrLn . encodePretty $ toOpenApi (Proxy :: Proxy (NamedRoutes FormsApi))
+```
+
+---
+
+Deriving a `Generic` instance for our API definition
+
+```haskell
+{-# LANGUAGE DeriveGeneric #-}
+
+-- base
+import GHC.Generics
+
+data FormsApi mode = FormsApi
+  { ...
+  }
+  deriving Generic
+```
+
+---
+
+Add `openapi3` package to our dependencies
+
+```yaml
+dependencies:
+  - openapi3
+```
+
+---
+
+And deriving `ToSchema` instances for our data types.
+
+```haskell
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
+-- base
+import GHC.Generics
+
+-- openapi3
+import Data.OpenApi
+
+newtype Questionnaire = Questionnaire
+  { title :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+```
+
+---
+
+And a `ToParamSchema` instance for `Id`
+
+```haskell
+newtype Id a = Id UUID
+  deriving (Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+```
+
+---
+
+Now we can generate the actual documentation
+
+```bash
+stack exec openapi > openapi.json
+```
+
+---
+
 # Learned concepts
 
 - `newtype`
@@ -1070,5 +1068,5 @@ formsServer (AppServices questionnaireRepository questionRepository answerSetRep
 - `FromJSON` and parsers
 - functors and applicatives
 - `Generic` programming
-- generating `OpenAPI` documentation
 - abstract over a context (higher kinded types)
+- generating `OpenAPI` documentation

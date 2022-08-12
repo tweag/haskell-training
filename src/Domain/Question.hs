@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Question where
 
@@ -25,8 +24,7 @@ import Data.UUID
 data AnswerType
   = Paragraph
   | Number
-  deriving stock Generic
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 newtype QuestionnaireId = QuestionnaireId UUID
 
@@ -35,5 +33,4 @@ data Question = Question
   , answerType :: AnswerType
   , questionnaireId :: Id Questionnaire
   }
-  deriving stock Generic
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)

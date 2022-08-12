@@ -24,13 +24,11 @@ data Answer = Answer
   , setId      :: Id AnswerSet
   , questionId :: Id Question
   }
-  deriving stock Generic
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data Content
   = Paragraph Text
   | Number Int
-  deriving stock Generic
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data AnswerSet

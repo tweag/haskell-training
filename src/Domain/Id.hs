@@ -17,14 +17,12 @@ import Data.OpenApi
 import Data.UUID
 
 newtype Id a = Id UUID
-  deriving stock Generic
-  deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 data Identified a = Identified
   { id     :: Id a
   , entity :: a
   }
-  deriving stock Generic
-  deriving anyclass (FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON)
 
 instance ToSchema a => ToSchema (Identified a)

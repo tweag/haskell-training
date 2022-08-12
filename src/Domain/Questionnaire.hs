@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Questionnaire where
 
@@ -16,8 +15,7 @@ import Data.OpenApi
 -- text
 import Data.Text
 
-newtype Questionnaire = Questionnaire
+data Questionnaire = Questionnaire
   { title :: Text
   }
-  deriving stock Generic
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
