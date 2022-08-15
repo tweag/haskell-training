@@ -65,7 +65,7 @@ data Question = Question
 
 ---
 
-We can copy the `AnsewrType` data type from our previous chapter
+We can copy the `AnswerType` data type from our previous chapter
 
 ```haskell
 data AnswerType
@@ -89,7 +89,7 @@ newtype QuestionnaireId = QuestionnaireId UUID
 We are using a [`newtype`](https://wiki.haskell.org/Newtype). It wraps a single data type to create a different data type with the same runtime representation.
 
 ```haskell
-newytpe Age = Age Int
+newtype Age = Age Int
 ```
 
 It allows us to enlarge our domain language without incurring in any runtime overhead.
@@ -254,7 +254,7 @@ It will be used to specify whether the API definition needs to be used for a ser
 
 ---
 
-We need to import the `:-` operator from the `Servant` library and enable the `TypeOperators` extensions to be able to use operators in a type definition.
+We need to import the `:-` operator from the `Servant` library and enable the `TypeOperators` extension to be able to use operators in a type definition.
 
 ```haskell
 {-# LANGUAGE TypeOperators #-}
@@ -477,6 +477,10 @@ We can look at this as a map from `Text` to `Questionnaire` inside the `Parser` 
 
 We actually have a map from `Text` to `Questionnaire`, which is the `Questionnaire` constructor.
 
+```haskell
+Questionnaire :: Text -> Questionnaire
+```
+
 We need a way to lift it to the `Parser` context.
 
 ---
@@ -502,6 +506,10 @@ It's worth mentioning that there is also an infix version of `fmap`, which is th
 -- compare it to
 ($)   :: (a -> b) ->   a ->   b
 ```
+
+---
+
+We're in luck since the `aeson` library provides a `Functor` instance for the `Parser` data type.
 
 ---
 
@@ -628,6 +636,8 @@ Unluckily, it falls short
 f :: a -> b -> c -> d
 fa :: f a
 f <$> fa :: f (b -> c -> d)
+
+-- we wanted :: f b -> f c -> f d
 ```
 
 ---
@@ -679,7 +689,7 @@ f <$> fa <*> fb <*> fc :: f d
 
 ---
 
-To sum up, we can use `<$>` and `<*>` to lift a function of any arity into an `Applicative` context.
+To sum up, we can use `<$>` and `<*>` to lift a function of any arity into any `Applicative` context.
 
 Exercise: try to write a `lift3 :: (a -> b -> c -> d) -> f a -> f b -> f c -> f d` function in terms of `<$>` and `<*>`.
 
