@@ -11,18 +11,18 @@ extra-source-files:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  #- bytestring
+  - bytestring
   #- containers
   #- extra
-  #- hasql
+  - hasql
   #- mtl
   - openapi3
-  #- rel8
+  - rel8
   #- semigroupoids
   - servant
   - servant-server
   - text
-  #- transformers
+  - transformers
   - uuid
   #- wai
   #- warp

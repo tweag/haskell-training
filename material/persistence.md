@@ -16,6 +16,12 @@ The simplest are [postgresql-simple](https://hackage.haskell.org/package/postgre
 
 We are going to use [rel8](https://hackage.haskell.org/package/rel8), a library which helps us to abstract away from the database and have a very Haskell-oriented approach
 
+```yaml
+-- package.yaml
+dependencies:
+  - rel8
+```
+
 ---
 
 First off, We need to think about our database schema
@@ -27,20 +33,20 @@ erDiagram
   QUESTIONNAIRE ||--o{ QUESTION : contains
   QUESTION ||--o{ ANSWER : "is answered by"
   QUESTIONNAIRE {
-    id   uuid
-    title text
+    id    Id Questionnaire
+    title Text
   }
   QUESTION {
-    id               uuid
-    questionnaire_id uuid
-    title            text
-    qtype            QuestionType
+    id               Id Question
+    questionnaire_id Id Questionnaire
+    title            Text
+    answer_type      AnswerType
   }
   ANSWER {
-    id          uuid
-    question_id uuid
-    set_id      uuid
-    content     Answer
+    id          Id Answer
+    question_id Id Question
+    set_id      Id AnswerSet
+    content     Content
   }
 ```
 
@@ -54,31 +60,35 @@ module Infrastructure.Persistence where
 
 ---
 
-We need to define the data types necessary to describe the database schema to out application
+We need to define the data types necessary to describe the database schema to our application
 
 ---
 
 Let's start with questionnaires
 
 ```haskell
+import Domain.Id
+import qualified Domain.Questionnaire as Domain
+
 -- rel8
 import Rel8
 
 -- text
 import Data.Text
 
--- uuid
-import Data.UUID
-
 data Questionnaire f = Questionnaire
-  { questionnaireId    :: Column f UUID
+  { questionnaireId    :: Column f (Id Domain.Questionnaire)
   , questionnaireTitle :: Column f Text
   }
 ```
 
 ---
 
-What is that `f`?
+To distinguish between data types with the same name, we use qualified imports, which require us to use a namespace
+
+---
+
+Now, what is that `f`?
 
 It describes the context (e.g. documentation/query expressions/results) in which the data need to be considered
 
@@ -100,11 +110,30 @@ To please `Rel8`, we need to add some deriving clauses
 import GHC.Generics
 
 data Questionnaire f = Questionnaire
-  { questionnaireId    :: Column f UUID
+  { questionnaireId    :: Column f (Id Domain.Questionnaire)
   , questionnaireTitle :: Column f Text
   }
   deriving (Generic, Rel8able)
 ```
+
+---
+
+We are missing an instance for `DBType (Id Domain.Questionnaire)`, which we can derive
+
+```haskell
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
+-- rel8
+import Rel8
+
+newtype Id a = Id UUID
+  deriving newtype (FromJSON, ToJSON, ToSchema, ToParamSchema, DBType)
+```
+
+---
+
+Notice the `newtype` keyword. That means that instead of deriving instances looking at the generic structure of the data type, we use directly the instance provided by the inner type.
 
 ---
 
@@ -154,11 +183,16 @@ Now you could try to do the same thing for `Question` and `Answer`, following th
 ---
 
 ```haskell
+import qualified Domain.Answer as Domain
+import Domain.Answer (Content)
+import qualified Domain.Question as Domain
+import Domain.Question (AnswerType)
+
 data Question f = Question
-  { questionId              :: Column f UUID
-  , questionQuestionnaireId :: Column f UUID
+  { questionId              :: Column f (Id Domain.Question)
+  , questionQuestionnaireId :: Column f (Id Domain.Questionnaire)
   , questionTitle           :: Column f Text
-  , questionType            :: Column f QuestionType
+  , questionAnswerType      :: Column f AnswerType
   }
   deriving (Generic, Rel8able)
 
@@ -170,15 +204,15 @@ questionSchema = TableSchema
     { questionId              = "id"
     , questionQuestionnaireId = "questionnaire_id"
     , questionTitle           = "title"
-    , questionType            = "qtype"
+    , questionAnswerType      = "answer_type"
     }
   }
 
 data Answer f = Answer
-  { answerId         :: Column f UUID
-  , answerQuestionId :: Column f UUID
-  , answerSetId      :: Column f UUID
-  , answerContent    :: Column f Answer
+  { answerId         :: Column f (Id Domain.Answer)
+  , answerQuestionId :: Column f (Id Domain.Question)
+  , answerSetId      :: Column f (Id Domain.AnswerSet)
+  , answerContent    :: Column f Content
   }
   deriving (Generic, Rel8able)
 
@@ -197,21 +231,7 @@ answerSchema = TableSchema
 
 ---
 
-As soon as we import `Domain.Forms`, we have different data types with same name in scope, and that is creating conflicts!
-
----
-
-We can solve this with a qualified import
-
-```haskell
-import qualified Domain.Forms as Domain
-```
-
-and then using the `Domain` namespace to disambiguate appearances
-
----
-
-To use `Domain.QuestionType` and `Domain.Answer` they need to have an instance of `DBType`. Following [the documentation](https://rel8.readthedocs.io/en/latest/concepts/dbtype.html?highlight=ReadShow#deriving-dbtype-via-readshow) of `Rel8`, we can just cleverly derive it
+To use `AnswerType` and `Content`, they need to have an instance of `DBType`. Following [the documentation](https://rel8.readthedocs.io/en/latest/concepts/dbtype.html?highlight=ReadShow#deriving-dbtype-via-readshow) of `Rel8`, we can just cleverly derive it
 
 ```haskell
 {-# LANGUAGE DerivingVia #-}
@@ -219,61 +239,29 @@ To use `Domain.QuestionType` and `Domain.Answer` they need to have an instance o
 -- rel8
 import Rel8
 
-data QuestionType
+data AnswerType
   = Paragraph
   | Number
-  deriving stock (Read, Show)
-  deriving DBType via ReadShow QuestionType
-
-data Answer
-  = ParagraphAnswer Text
-  | NumberAnswer Int
-  deriving stock (Read, Show)
-  deriving DBType via ReadShow Answer
+  deriving stock (Read, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving DBType via ReadShow AnswerType
 ```
-
----
-
-To many fields are using the `UUID` type and the change of confusing between them is extremely high.
-
-We want those fields to have a different type at the Haskell level, so that the type system would prevent us from making a mistake.
-
----
-
-We are going to use [`newtype`s](https://wiki.haskell.org/Newtype). They wrap a single data type to create a different data type with the same runtime representation.
 
 ```haskell
-newytpe Age = Age Int
+{-# LANGUAGE DerivingVia #-}
+
+-- rel8
+import Rel8
+
+data Content
+  = Paragraph Text
+  | Number Int
+  deriving stock (Generic, Read, Show)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving DBType via ReadShow Content
 ```
 
-It allows us to enlarge our domain language without incurring in any runtime overhead.
-
 ---
-
-We are going to define domain specific `id`s.
-
-```haskell
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
-newtype QuestionnaireId = QuestionnaireId UUID
-  deriving newtype (DBType)
-
-newtype QuestionId = QuestionId UUID
-  deriving newtype (DBType)
-
-newtype AnswerId = AnswerId UUID
-  deriving newtype (DBType)
-
-newtype AnswerSetId = AnswerSetId UUID
-  deriving newtype (DBType)
-```
-
-and use them in the relevant places
-
----
-
-Notice the `newtype` keyword after `deriving`. Since there is more than one way to derive an instance, we explicitly inform the compiler which strategy should be used.
 
 ---
 
@@ -316,7 +304,7 @@ WHERE questionnaier_id = :questionnaire_id
 We want to create a `Query` which produces `Question`s, given a specific `QuestionnaireId`
 
 ```haskell
-questionnaireQuestions :: QuestionnaireId -> Query (Question Expr)
+questionnaireQuestions :: Id Domain.Questionnaire -> Query (Question Expr)
 ```
 
 ---
@@ -342,11 +330,17 @@ For our purposes a monad instance on a data structure allows executing sequentia
 
 ---
 
+Monads encode the ability to perform sequential computations in a given context.
+
+This focus on contexts is what makes monads so important in Haskell and why they are not that common in other programming languages.
+
+---
+
 As you might expect, `IO` is a monad, and `Query` is a monad.
 
 ---
 
-And then we filter only the `questions` which have the correct `QuestionnaireId`
+And then we filter only the `questions` which have the correct `Id Questionnaire`
 
 `Rel8` offers us a `where_` combinator which allows us to filter based on a criterion.
 
@@ -367,7 +361,7 @@ We can use the `questionQuestionnaireId` field as a function
   where_ $ _ (questionQuestionnaireId question)
 ```
 
-and be left with a hole `_ :: Expr QuestionnaireId -> Expr Bool` to fill.
+and be left with a hole `_ :: Expr (Id Questionnaire) -> Expr Bool` to fill.
 
 ---
 
@@ -381,9 +375,7 @@ We can do this using the [`(==.)`](https://hackage.haskell.org/package/rel8-1.3.
 
 ---
 
-The compiler is signalling us that we are missing a `DBEq` instance on `QuestionnaireId`, which is needed to compare fields for equality.
-
-Actually, let's add it to all the `Id`s type we introduced.
+The compiler is signalling us that we are missing a `DBEq` instance on `Id Questionnaire`, which is needed to compare fields for equality.
 
 ```haskell
   deriving newtype (DBType, DBEq)
@@ -391,9 +383,9 @@ Actually, let's add it to all the `Id`s type we introduced.
 
 ---
 
-Now we need a value of type `Expr QuestionnaireId` to fill our remaining hole.
+Now we need a value of type `Expr (Id Questionnaire)` to fill our remaining hole.
 
-We can use the [`lit`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:lit) function to lift our `QuestionnaireId` to the `Expr` context.
+We can use the [`lit`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:lit) function to lift our `Id Questionnaire` to the `Expr` context.
 
 ```haskell
   where_ $ questionQuestionnaireId question ==. lit questionnaireId
@@ -417,7 +409,11 @@ As an exercise, try to implement yourself the query to retrieve all the answers 
 ---
 
 ```haskell
-questionnaireAnswers :: QuestionnaireId -> Query (Answer Expr)
+-- SELECT * FROM answer
+-- JOIN (SELECT * FROM question
+--       WHERE questionnaire_id = :questionnaire_id) AS questions
+-- WHERE answer.question_id = questions.id
+questionnaireAnswers :: Id Domain.Questionnaire -> Query (Answer Expr)
 questionnaireAnswers questionnaireId = do
   question <- questionnaireQuestions questionnaireId
   answer <- each answerSchema
@@ -436,7 +432,7 @@ We're not going to analyze the code in detail, we're just going to check that it
 First, we need to be able to print some `Answer Result`
 
 ```haskell
-
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -445,7 +441,12 @@ deriving stock instance f ~ Result => Show (Answer f)
 
 ---
 
-We need also to add a `Show` instance for all the fields of `Answer f`.
+We need also to add a `Show` instance for the `Id a` data type.
+
+```haskell
+newtype Id a = Id UUID
+  deriving newtype (Show, ...)
+```
 
 ---
 
@@ -456,7 +457,7 @@ Then we can write our `main` function to run the query and print its results
 
 module Main where
 
--- import Forms
+import Domain.Id
 import Infrastructure.Persistence
 
 -- base
@@ -481,7 +482,7 @@ main = do
   either
     (fail . unpack . fromMaybe "unable to connect to the database")
     (\connection' -> do
-      response <- run (statement () . select $ questionnaireAnswers (QuestionnaireId nil)) connection'
+      response <- run (statement () . select $ questionnaireAnswers (Id nil)) connection'
       print response)
     connection
 ```
@@ -498,218 +499,11 @@ The results will depend on the data you have in your database
 
 ---
 
-All other queries we need are provided by us.
-
 ---
 
-Now we need to restructure a bit our domain so that it could reflect the information we are storing in our database.
+Now we want to connect our database to our domain logic.
 
-Still we want to keep our domain completely separate from the database layer
-
----
-
-We want to rewrite our domain with the new knowledge we have about it.
-
-We will structure it more carefully, separating each entity in a separate file.
-
----
-
-Let's start from `Questionnaire`, which has only a `title` attribute
-
-```haskell
-module Domain.Forms.Questionnaire where
-
--- text
-import Data.Text
-
-newtype Questionnaire = Questionnaire
-  { title :: Text
-  }
-```
-
----
-
-Similarly, we define also `Question` in a separate module
-
-```haskell
-module Domain.Forms.Question where
-
--- text
-import Data.Text
-
-data Question = Question
-  { title :: Text
-  , qtype :: QuestionType
-  }
-```
-
----
-
-We need to migrate also the `QuestionType` data type in the same module
-
-```haskell
-data QuestionType
-  = Paragraph
-  | Number
-  deriving stock (Read, Show)
-  deriving DBType via ReadShow QuestionType
-```
-
----
-
-Do not forget to update the import in the database module
-
-```haskell
-import qualified Domain.Forms.Question as Domain
-```
-
----
-
-Next we define another module for `Answer`
-
-```haskell
-module Domain.Forms.Answer where
-
-data Answer = Answer
-  { setId   :: SetId
-  , content :: Content
-  }
-```
-
----
-
-We need to move also the `SetId` and the `Content` data types
-
-```haskell
-newtype SetId = SetId UUID
-  deriving newtype (DBType, DBEq, Show)
-
-data Content
-  = ParagraphAnswer Text
-  | NumberAnswer Int
-  deriving stock (Read, Show)
-  deriving (DBType, DBEq) via ReadShow Content
-```
-
----
-
-We also want to use the new data types we just created in our database module
-
-```haskell
-import qualified Domain.Forms.Answer as Answer
-
-data Answer f = Answer
-  { answerId         :: Column f AnswerId
-  , answerQuestionId :: Column f QuestionId
-  , answerSetId      :: Column f Answer.SetId
-  , answerContent    :: Column f Answer.Content
-  }
-  deriving (Generic, Rel8able)
-```
-
----
-
-There is another thing we want to lift at the domain level, and it's all the entity `Id`s.
-
-Still, we want to keep them separate from the entities themselves.
-
----
-
-This is also an occasion to remove some boilerplate and consolidate the logic around `Id`s
-
----
-
-We can create a single `Id` that distinguishes at the type level which entity it is referring to
-
-```haskell
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
-module Domain.Forms.Id where
-
--- rel8
-import Rel8
-
---uuid
-import Data.UUID
-import Data.UUID.V4
-
-newtype Id a = Id UUID
-  deriving newtype (DBType, DBEq, Show)
-
-generate :: IO (Id a)
-generate = Id <$> nextRandom
-```
-
----
-
-`Id Question` and `Id Answer` are two different types. The compiler will always refuse to use one where the other is expected, even though their runtime representation is the same
-
----
-
-Now let's use this new `Id` at the database level
-
-Let's remove `QuestionnaireId`, `QuestionId` and `AnswerId` and replace them with `Id`
-
----
-
-Now that we have our domain entities, we want to define an interface for the possible interactions we could have with them.
-
-We will use the [Repository pattern](https://www.martinfowler.com/eaaCatalog/repository.html), to mediate between the domain and the persistence layers using a collection-like interface for accessing domain values.
-
-It will be our interface to access and interact with the domain. It also allows defining multiple implementations (e.g. one for production and one for testing)
-
----
-
-Let's start creating a repository for the `Questionnaire` entity.
-
-Which are the interactions we need?
-
-We want to create a new questionnaire and to retrieve all the questionnaires
-
----
-
-We create a record with all our interactions
-
-```haskell
-data QuestionnaireRepository m = QuestionnaireRepository
-  { createNewQuestionnaire  :: Questionnaire -> m (Id Questionnaire)
-  , selectAllQuestionnaires :: m [Questionnaire]
-  }
-```
-
----
-
-What does the `m` represent?
-
-It stands for the context where the results of our operations are going to live.
-
-It is needed because those operations need to allow some effect to happen.
-
-The `m` tracks the possible effects which are allowed.
-
----
-
-Similarly, try to define yourself the `QuestionRepository` with the two operations `addNewQuestion` and `selectAllQuestionnaireQuestions`
-
----
-
-```haskell
-module Domain.FormsOld.QuestionRepository where
-
-import Domain.FormsOld.Id
-import Domain.FormsOld.Question
-import Domain.FormsOld.Questionnaire
-
-data QuestionRepository m = QuestionRepository
-  { addNewQuestion                  :: Id Questionnaire -> Question -> m (Id Question)
-  , selectAllQuestionnaireQuestions :: Id Questionnaire -> m [Question]
-  }
-```
-
----
-
-Now that we defined the interface, let's try to actually implement it using our database code.
+We can do that by implementing the repositories which we introduced last time.
 
 ---
 
@@ -724,26 +518,29 @@ module Infrastructure.PostgresQuestionnaireRepository where
 Let's start by defining a concrete implementation of our interface and take it from there
 
 ```haskell
-import Domain.Forms.Id
-import qualified Domain.Forms.Questionnaire as Domain
-import Domain.Forms.QuestionnaireRepository
+import Domain.Id
+import qualified Domain.Questionnaire as Domain
+import Domain.QuestionnaireRepository
+
+-- base
+import Prelude hiding (all)
 
 postgresQuestionnaireRepository :: QuestionnaireRepository m
 postgresQuestionnaireRepository = QuestionnaireRepository
-  { createNewQuestionnaire  = postgresCreateNewQuestionnaire
-  , selectAllQuestionnaires = postgresSelectAllQuestionnaires
+  { add = postgresAddQuestionnaire
+  , all = postgresAllQuestionnaires
   }
 
-postgresCreateNewQuestionnaire :: Domain.Questionnaire -> m (Id Domain.Questionnaire)
-postgresCreateNewQuestionnaire questionnaire = _
+postgresAddQuestionnaire :: Domain.Questionnaire -> m (Id Domain.Questionnaire)
+postgresAddQuestionnaire questionnaire = _
 
-postgresSelectAllQuestionnaires :: m [Domain.Questionnaire]
-postgresSelectAllQuestionnaires = _
+postgresAllQuestionnaires :: m [Identified Domain.Questionnaire]
+postgresAllQuestionnaires = _
 ```
 
 ---
 
-First we're going to implement `postgresCreateNewQuestionnaire`.
+First we're going to implement `postgresAddQuestionnaire`.
 
 What we need to do is:
 - create a new `Id Questionnaire`
@@ -753,27 +550,38 @@ What we need to do is:
 
 ---
 
-The implementation we are looking for is clearly sequential. This means we need `do` notation, which implies that `m` needs to be a `Monad`
+The implementation we are looking for is clearly sequential. This means that the context `m` in which we are working needs to be a `Monad` and that we can use `do` notation.
 
 ```haskell
-postgresCreateNewQuestionnaire :: Monad m => Domain.Questionnaire -> m (Id Domain.Questionnaire)
-postgresCreateNewQuestionnaire questionnaire = do
+postgresAddQuestionnaire :: Monad m => Domain.Questionnaire -> m (Id Domain.Questionnaire)
+postgresAddQuestionnaire questionnaire = do
   _
 ```
 
 ---
 
-The first step is creating a new `Id Questionnaire`.
-
-We actually already have an operation to do this
+The `Monad m` constraint needs to be propagated to `postgresQuestionnaireRepository`
 
 ```haskell
-generate :: IO (Id a)
+postgresQuestionnaireRepository :: Monad m => QuestionnaireRepository m
 ```
 
 ---
 
-We notice now that `generate` is operating in the `IO` context, while we are working in `m`.
+The first implementation step is creating a new `Id Questionnaire`.
+
+We can generate one by generating a `UUID` with `nextRandom :: IO UUID` and then wrapping it with the `Id` constructor
+
+```haskell
+import Data.UUID.V4
+
+generate :: IO (Id a)
+generate = Id <$> nextRandom
+```
+
+---
+
+We notice now that `generate` is operating in the `IO` context, while we are working in a generic monadic context `m`.
 
 ---
 
@@ -782,8 +590,8 @@ The easiest way to make it all work is to use `IO` instead of `m`, knowing that 
 ```haskell
 postgresQuestionnaireRepository :: QuestionnaireRepository IO
 
-postgresCreateNewQuestionnaire :: Domain.Questionnaire -> IO (Id Domain.Questionnaire)
-postgresCreateNewQuestionnaire questionnaire = do
+postgresAddQuestionnaire :: Domain.Questionnaire -> IO (Id Domain.Questionnaire)
+postgresAddQuestionnaire questionnaire = do
   id <- generate
   _
 ```
@@ -799,15 +607,15 @@ We provide all the conversion functions in a specific `Infrastructure.Serializer
 ```haskell
 module Infrastructure.Serializer where
 
-import Domain.Forms.Id
-import qualified Domain.Forms.Questionnaire as Domain
+import Domain.Id
+import qualified Domain.Questionnaire as Domain
 import Infrastructure.Persistence
 
 -- rel8
 import Rel8
 
-serializeQuesionnaire :: Id Domain.Questionnaire -> Domain.Questionnaire -> Questionnaire Result
-serializeQuesionnaire questionnaireId questionnaire = _
+serializeQuestionnaire :: Identified Domain.Questionnaire -> Questionnaire Result
+serializeQuestionnaire (Identified questionnaireId questionnaire) = _
 ```
 
 ---
@@ -815,7 +623,7 @@ serializeQuesionnaire questionnaireId questionnaire = _
 Constructing a `Questionnaire Result` is easy. We just need to use the `Questionnaire` constructor
 
 ```haskell
-serializeQuesionnaire questionnaireId questionnaire = Questionnaire
+serializeQuestionnaire (Identified questionnaireId questionnaire) = Questionnaire
   { questionnaireId    = _
   , questionnaireTitle = _
   }
@@ -828,9 +636,9 @@ And then we just fill the holes using the input values
 ```haskell
 import qualified Domain.Forms.Questionnaire as Questionnaire
 
-serializeQuesionnaire questionnaireId questionnaire = Questionnaire
+serializeQuestionnaire (Identified questionnaireId (Domain.Questionnaire title)) = Questionnaire
   { questionnaireId    = questionnaireId
-  , questionnaireTitle = Questionnaire.title questionnaire
+  , questionnaireTitle = title
   }
 ```
 
@@ -841,9 +649,9 @@ Now we can use our serialization function in the implementation of `postgresCrea
 ```haskell
 import Infrastructure.Serializer
 
-postgresCreateNewQuestionnaire questionnaire = do
+postgresAddQuestionnaire questionnaire = do
   id <- generate
-  let serializedQuestionnaire = serializeQuesionnaire id questionnaire
+  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
   _
 ```
 
@@ -852,20 +660,31 @@ postgresCreateNewQuestionnaire questionnaire = do
 Now we can create our query
 
 ```haskell
-import Infrastructure.Persistence
+import qualified Infrastructure.Persistence as DB
 
 -- rel8
 import Rel8
 
-postgresCreateNewQuestionnaire questionnaire = do
+postgresAddQuestionnaire questionnaire = do
   id <- generate
-  let serializedQuestionnaire = serializeQuesionnaire id questionnaire
-      addQuestionnaire        = add questionnaireSchema [lit serializedQuestionnaire]
+  let serializedQuestionnaire = serializeQuestionnaire id questionnaire
+      addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
   _
 ```
 
-note:
-- `add` needs to be provided
+where `add` is a query we need to define in the `Persistence` module
+
+```haskell
+import qualified Rel8 as Insert (Insert(returning))
+
+add :: Rel8able f => TableSchema (f Name) -> [f Expr] -> Insert ()
+add schema rows' = Insert
+  { into             = schema
+  , rows             = values rows'
+  , onConflict       = Abort
+  , Insert.returning = pure ()
+  }
+```
 
 ---
 
@@ -875,13 +694,10 @@ And run it
 -- hasql
 import Hasql.Session
 
--- rel8
-import Rel8
-
-postgresCreateNewQuestionnaire questionnaire = do
+postgresAddQuestionnaire questionnaire = do
   id <- generate
-  let serializedQuestionnaire = serializeQuesionnaire id questionnaire
-      addQuestionnaire        = add questionnaireSchema [lit serializedQuestionnaire]
+  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
+      addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
   eitherError <- run (statement () . insert $ addQuestionnaire) connection
   _
 ```
@@ -893,11 +709,11 @@ postgresCreateNewQuestionnaire questionnaire = do
 ```haskell
 import Hasql.Connection
 
-postgresCreateNewQuestionnaire :: Connection -> Domain.Questionnaire -> IO (Id Domain.Questionnaire)
-postgresCreateNewQuestionnaire connection questionnaire = do
+postgresAddQuestionnaire :: Connection -> Domain.Questionnaire -> IO (Id Domain.Questionnaire)
+postgresAddQuestionnaire connection questionnaire = do
   id <- generate
-  let serializedQuestionnaire = serializeQuesionnaire id questionnaire
-      addQuestionnaire        = add questionnaireSchema [lit serializedQuestionnaire]
+  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
+      addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
   eitherError <- run (statement () . insert $ addQuestionnaire) connection
   _
 ```
@@ -909,8 +725,8 @@ We need to propagate that argument to `postgresQuestionnaireRepository`
 ```haskell
 postgresQuestionnaireRepository :: Connection -> QuestionnaireRepository IO
 postgresQuestionnaireRepository connection = QuestionnaireRepository
-  { createNewQuestionnaire  = postgresCreateNewQuestionnaire connection
-  , selectAllQuestionnaires = postgresSelectAllQuestionnaires
+  { add = postgresAddQuestionnaire connection
+  , all = postgresAllQuestionnaires
   }
 ```
 
@@ -921,19 +737,19 @@ Last thing we need to do is return the newly crafted `id`. We need to be careful
 The most sensible thing we can do is pass on the information to the caller
 
 ```haskell
-postgresCreateNewQuestionnaire :: Connection -> Domain.Questionnaire -> IO (Either QueryError (Id Domain.Questionnaire))
+postgresAddQuestionnaire :: Connection -> Domain.Questionnaire -> IO (Either QueryError (Id Domain.Questionnaire))
 ```
 
-This does not work since the return type of `createNewQuestionnaire` for a `QuestionnaireRepository` needs to be of the form `m (Id Questionnaire)`.
+This does not work since the return type of `add` for a `QuestionnaireRepository` needs to be of the form `m (Id Questionnaire)`.
 
 We need to somehow move the `Either QueryError` inside the `m`.
 
 ---
 
-The solution is to use a monad transformer
+The solution is to use a monad transformer, which allows integrating `IO` and `Either QueryError` in the same context
 
 ```haskell
--- from Control.Monad.Trans.Except
+-- from Control.Monad.Trans.Except in the `transformers` package
 
 newtype ExceptT e m a = ExceptT (m (Either e a))
 ```
@@ -957,14 +773,14 @@ foo = do
   b
 ```
 
-If `a` fails (i.e. it returns a `Left`), then `b` is skipped and the whole computation fails with the result of `a`.
+If `a` fails (i.e. it returns a `Left`), then `b` is skipped and the whole computation fails with the error result of `a`.
 
 ---
 
 We can adapt our code to use `ExceptT QueryError IO`
 
 ```haskell
-postgresCreateNewQuestionnaire :: Connection -> Domain.Questionnaire -> ExceptT QueryError IO (Id Domain.Questionnaire)
+postgresAddQuestionnaire :: Connection -> Domain.Questionnaire -> ExceptT QueryError IO (Id Domain.Questionnaire)
 ```
 
 we need to update also
@@ -983,7 +799,7 @@ Luckily we have a function `liftIO :: IO a -> ExceptT e m a ` which allows us to
 -- base
 import Control.Monad.IO.Class
 
-postgresCreateNewQuestionnaire connection questionnaire = do
+postgresAddQuestionnaire connection questionnaire = do
   id <- liftIO generate
   ...
 ```
@@ -997,53 +813,53 @@ We just need to wrap it in the `ExceptT` newtype.
 The code now becomes
 
 ```haskell
-postgresCreateNewQuestionnaire connection questionnaire = do
+postgresAddQuestionnaire connection questionnaire = do
   id <- liftIO generate
-  let serializedQuestionnaire = serializeQuesionnaire id questionnaire
-      addQuestionnaire        = add questionnaireSchema [lit serializedQuestionnaire]
+  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
+      addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
   ExceptT $ run (statement () . insert $ addQuestionnaire) connection
   _
 ```
 
 ---
 
-Eventually, we can map over our error and return our desired value
+Eventually, we can return our desired value
 
 ```haskell
-postgresCreateNewQuestionnaire connection questionnaire = do
+postgresAddQuestionnaire connection questionnaire = do
   id <- liftIO generate
-  let serializedQuestionnaire = serializeQuesionnaire id questionnaire
-      addQuestionnaire        = add questionnaireSchema [lit serializedQuestionnaire]
+  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
+      addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
   ExceptT $ run (statement () . insert $ addQuestionnaire) connection
   pure id
 ```
 
 ---
 
-Exercise for you: implement the `postgresSelectAllQuestionnaires` interaction
+Exercise for you: implement the `postgresAllQuestionnaires` function
 
 ```haskell
 -- Infrastructure.Serializer
-deserializeQuestionnaire :: Questionnaire Result -> (Id Domain.Questionnaire, Domain.Questionnaire)
-deserializeQuestionnaire questionnaire =
-  ( questionnaireId questionnaire
-  , Domain.Questionnaire $ questionnaireTitle questionnaire
-  )
+
+deserializeQuestionnaire :: Questionnaire Result -> Identified Domain.Questionnaire
+deserializeQuestionnaire (Questionnaire id title) = Identified
+  { id = id
+  , entity = Domain.Questionnaire title
+  }
 
 -- Infrastructure.PostgresQuestionnaireRepository
 
-postgresSelectAllQuestionnaires :: Connection -> ExceptT QueryError IO [Domain.Questionnaire]
-postgresSelectAllQuestionnaires connection = do
-  questionnaires <- ExceptT $ run (statement () . select $ allQuestionnaires) connection
-  pure $ snd . deserializeQuestionnaire <$> questionnaires
+postgresAllQuestionnaires :: Connection -> ExceptT QueryError IO [Identified Domain.Questionnaire]
+postgresAllQuestionnaires connection = do
+  questionnaires <- ExceptT $ run (statement () . select $ DB.allQuestionnaires) connection
+  pure $ deserializeQuestionnaire <$> questionnaires
 ```
 
 ---
 
 ## Learned concepts
 
-- higher kinded types and higher kinded data
-- `newtype`
+- higher kinded data
 - deriving strategies and `newtype` deriving
 - `do` works for any `Monad`
 - separating interface from implementation
