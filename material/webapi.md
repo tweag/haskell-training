@@ -2,6 +2,10 @@
 
 ---
 
+Gitpod snapshot: https://gitpod.io#snapshot/5eeb1fc7-a7eb-4a93-9d70-e468c6f20c34
+
+---
+
 In this second chapter we want to transform our terminal application into a more structured web API which somehow resembles the functioning of Google Forms
 
 ---
