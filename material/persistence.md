@@ -404,25 +404,6 @@ questionnaireQuestions questionnaireId = do
 
 ---
 
-As an exercise, try to implement yourself the query to retrieve all the answers for a specific questionnaire
-
----
-
-```haskell
--- SELECT * FROM answer
--- JOIN (SELECT * FROM question
---       WHERE questionnaire_id = :questionnaire_id) AS questions
--- WHERE answer.question_id = questions.id
-questionnaireAnswers :: Id Domain.Questionnaire -> Query (Answer Expr)
-questionnaireAnswers questionnaireId = do
-  question <- questionnaireQuestions questionnaireId
-  answer <- each answerSchema
-  where_ $ answerQuestionId answer ==. questionId question
-  pure answer
-```
-
----
-
 Now we would like to execute this last query and print results to the console
 
 We're not going to analyze the code in detail, we're just going to check that it works
@@ -482,7 +463,7 @@ main = do
   either
     (fail . unpack . fromMaybe "unable to connect to the database")
     (\connection' -> do
-      response <- run (statement () . select $ questionnaireAnswers (Id nil)) connection'
+      response <- run (statement () . select $ questionAnswers (Id nil)) connection'
       print response)
     connection
 ```

@@ -94,16 +94,35 @@ questionnaireQuestions questionnaireId = do
   where_ $ questionQuestionnaireId question ==. lit questionnaireId
   pure question
 
--- SELECT * FROM answer
--- JOIN (SELECT * FROM question
---       WHERE questionnaire_id = :questionnaire_id) AS questions
--- WHERE answer.question_id = questions.id
-questionnaireAnswers :: Id Domain.Questionnaire -> Query (Answer Expr)
-questionnaireAnswers questionnaireId = do
+-- -- SELECT * FROM answer
+-- -- JOIN (SELECT * FROM question
+-- --       WHERE questionnaire_id = :questionnaire_id) AS questions
+-- -- WHERE answer.question_id = questions.id
+-- questionnaireAnswers :: Id Domain.Questionnaire -> Query (Answer Expr)
+-- questionnaireAnswers questionnaireId = do
+--   question <- questionnaireQuestions questionnaireId
+--   answer <- each answerSchema
+--   where_ $ answerQuestionId answer ==. questionId question
+--   pure answer
+
+answerSetAnswers :: Id Domain.AnswerSet -> Query (Answer Expr)
+answerSetAnswers setId = do
+  answer <- each answerSchema
+  where_ $ answerSetId answer ==. lit setId
+  pure answer
+
+questionAnswers :: Id Domain.Question -> Query (Answer Expr)
+questionAnswers questionId = do
+  answer <- each answerSchema
+  where_ $ answerQuestionId answer ==. lit questionId
+  pure answer
+
+questionnaireAnswerSets :: Id Domain.Questionnaire -> Query (Expr (Id Domain.AnswerSet))
+questionnaireAnswerSets questionnaireId = do
   question <- questionnaireQuestions questionnaireId
   answer <- each answerSchema
   where_ $ answerQuestionId answer ==. questionId question
-  pure answer
+  distinct . pure $ answerSetId answer
 
 add :: Rel8able f => TableSchema (f Name) -> [f Expr] -> Insert ()
 add schema rows' = Insert

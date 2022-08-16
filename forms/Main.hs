@@ -27,6 +27,6 @@ main = do
   either
     (fail . unpack . fromMaybe "unable to connect to the database")
     (\connection' -> do
-      response <- run (statement () . select $ questionnaireAnswers (Id nil)) connection'
+      response <- run (statement () . select $ questionAnswers (Id nil)) connection'
       print response)
     connection
