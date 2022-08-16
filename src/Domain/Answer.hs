@@ -21,7 +21,6 @@ import Data.Text
 
 data Answer = Answer
   { content    :: Content
-  , setId      :: Id AnswerSet
   , questionId :: Id Question
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)

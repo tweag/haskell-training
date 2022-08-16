@@ -109,14 +109,13 @@ dependencies:
 
 ---
 
-The last relevant entity is `Answer`, which is identified by its `content`, a `set` `id` and a `question` `id`
+The last relevant entity is `Answer`, which is identified by its `content` and a `question` `id`
 
 ```haskell
 module Domain.Ansewr where
 
 data Answer = Answer
   { content    :: Content
-  , setId      :: SetId
   , questionId :: QuestionId
   }
 ```
@@ -136,13 +135,11 @@ data Content
 
 ---
 
-We can define `SetId` and `QuestionId` similarly to how we defined `QuestionnaireId`
+We can define `QuestionId` similarly to how we defined `QuestionnaireId`
 
 ```haskell
 --uuid
 import Data.UUID
-
-newtype SetId = SetId UUID
 
 newtype QuestionId = QuestionId UUID
 ```
@@ -169,18 +166,6 @@ newtype Id a = Id UUID
 Now `Id Questionnaire`, `Id Question` and `Id Answer` are all containing a `UUID`, while being distinct at the type level.
 
 We can now ditch `QuestionnaireId` and `QuestionId`.
-
----
-
-Actually also `SetId` has the same format, but we don't have a data type we could use to tag it.
-
-Well, we can create it, can't we?
-
-```haskell
-data AnswerSet
-```
-
-And now we can use `Id AnswerSet`
 
 ---
 
@@ -354,6 +339,16 @@ data FormsApi mode = FormsApi
   , setIdAnswers    :: mode :- "set-answers"       :> Capture "set" (Id AnswerSet)               :> Get  '[JSON] [(Id Answer, Answer)]
   , questionAnswers :: mode :- "question-answers"  :> Capture "question" (Id Question)           :> Get  '[JSON] [(Id Answer, Answer)]
   }
+```
+
+---
+
+We are using `AnswerSet` to tag out `Id` type, but actually we never defined such a data type.
+
+Since we are using it only as type level tag, it doesn't need to have any real constructor.
+
+```haskell
+data AnswerSet = AnswerSet
 ```
 
 ---
