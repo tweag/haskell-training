@@ -7,7 +7,7 @@ CREATE TABLE question
 ( id UUID PRIMARY KEY
 , questionnaire_id UUID REFERENCES questionnaire (id) ON DELETE CASCADE ON UPDATE CASCADE
 , title TEXT
-, qtype TEXT
+, answer_type TEXT
 );
 
 CREATE TABLE answer

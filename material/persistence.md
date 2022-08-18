@@ -838,6 +838,350 @@ postgresAllQuestionnaires connection = do
 
 ---
 
+Similarly, we can implement all the other repositories `PostgresQuestionRepository`, `PostgresAnswerSetRepository` and `PostgresAnswerRepository`.
+
+---
+
+Now we need to connect the domain to the concrete implementation of the repositories.
+
+The place to do that is the `AppServices` argument to our `fromsServer`.
+
+We need to build a `AppServices` using our newly created repositories.
+
+```haskell
+postgresAppServices :: AppServices
+postgresAppServices = AppServices
+  { questionnaireRepository = _
+  , questionRepository      = _
+  , answerSetRepository     = _
+  , answerRepository        = _
+  }
+```
+
+---
+
+`AppServices` works in the `Handler` context, while our concrete repositories work in the `ExceptT QueryError IO` context.
+
+We need a way to a move from the latter to the former
+
+---
+
+What we want is a way to migrate between contexts
+
+```haskell
+hoist :: QuestionnaireRepository m -> QuestionnaireRepository n
+```
+
+---
+
+Let's start implementing `hoist` following the types, to find out what we actually need
+
+```haskell
+hoist :: QuestionnaireRepository m -> QuestionnaireRepository n
+hoist (QuestionnaireRepository add all) = QuestionnaireRepository _ _
+```
+
+---
+
+The first hole has type
+
+```haskell
+Questionnaire -> n (Id Questionnaire)
+```
+
+while we have `add :: Questionnaire -> m (Id Questionnaire)`
+
+---
+
+The only sensible thing which we can do is first use `add`
+
+```haskell
+hoist (QuestionnaireRepository add all) = QuestionnaireRepository
+  (_ . add)
+  _
+```
+
+Now the hole has type `m (Id Questionnaire) -> n (Id Questionnaire)`
+
+---
+
+Let's turn our attention to the other hole, now. It has type `n [Identified Questionnaire]`.
+
+We have `all :: m [Identified Questionnaire]`.
+
+```haskell
+hoist (QuestionnaireRepository add all) = QuestionnaireRepository
+  (_ . add)
+  (_ all)
+```
+
+If we use it we are left with a `m [Identified Questionnaire] -> n [Identified Questionnaire]` hole
+
+---
+
+Notice now the similarity in the structure of both holes; they both have the form `m a -> n a`. Let's try to pass such a function as an argument.
+
+```haskell
+hoist :: (m a -> n a) -> QuestionnaireRepository m -> QuestionnaireRepository n
+hoist f (QuestionnaireRepository add all) = QuestionnaireRepository
+  (f . add)
+  (f all)
+```
+
+Ouch, it doesn't work!
+
+---
+
+This happens because when me there is a type variable in a function signature, the caller has the ability to choose the actual value of that type variable.
+
+On the contrary, here we would like a function which works uniformly for every `a`, and then the implementation chooses the concrete `a` (even different ones) every time.
+
+---
+
+To do this, we need to mention explicitly in our type that the provided function should work for all possible `a`.
+
+We use the `forall` syntax to make that explicit.
+
+```haskell
+{-# LANGUAGE RankNTypes #-}
+
+hoist :: (forall a. m a -> n a) -> QuestionnaireRepository m -> QuestionnaireRepository n
+hoist f (QuestionnaireRepository add all) = QuestionnaireRepository
+  (f . add)
+  (f all)
+```
+
+`hoist` then becomes what is known as a rank-2 function.
+
+---
+
+Similarly, we need a `hoist` function for the other repositories.
+
+---
+
+We can now progress with the definition of `postgresAppServices`
+
+```haskell
+import Domain.AnswerRepository as Answer
+import Domain.AnswerSetRepository as AnswerSet
+import Domain.QuestionnaireRepository as Questionnaire
+import Domain.QuestionRepository as Question
+import Infrastructure.PostgresAnswerRepository
+import Infrastructure.PostgresAnswerSetRepository
+import Infrastructure.PostgresQuestionRepository
+import Infrastructure.PostgresQuestionnaireRepository
+
+postgresAppServices connection = AppServices
+  { questionnaireRepository = Questionnaire.hoist _ $ postgresQuestionnaireRepository connection
+  , questionRepository      = Question.hoist      _ $ postgresQuestionRepository connection
+  , answerSetRepository     = AnswerSet.hoist     _ $ postgresAnswerSetRepository connection
+  , answerRepository        = Answer.hoist        _ $ postgresAnswerRepository connection
+  }
+```
+
+---
+
+Now all four holes require a function `ExceptT QueryError IO a -> Handler a`.
+
+We can use the same function everywhere
+
+```haskell
+postgresAppServices connection = AppServices
+  { questionnaireRepository = Questionnaire.hoist f $ postgresQuestionnaireRepository connection
+  , questionRepository      = Question.hoist      f $ postgresQuestionRepository connection
+  , answerSetRepository     = AnswerSet.hoist     f $ postgresAnswerSetRepository connection
+  , answerRepository        = Answer.hoist        f $ postgresAnswerRepository connection
+  }
+  where
+    f :: ExceptT QueryError IO a -> Handler a
+    f exceptT = _
+```
+
+---
+
+We can use the `Handler` constructor
+
+```haskell
+    f exceptT = Handler _
+```
+
+which leaves us with a `ExceptT ServerError IO a` hole. It looks similar to our `exceptT :: ExceptT QueryError IO a` type, but the error type is different.
+
+---
+
+We can use [`withExceptT`](https://hackage.haskell.org/package/transformers/docs/Control-Monad-Trans-Except.html#v:withExceptT) to go from on type error to the other
+
+```haskell
+    f exceptT = Handler $ withExceptT _ exceptT
+```
+
+where the hole has type `QueryError -> ServerError`.
+
+---
+
+We need to decide how to handle the database errors at the server level.
+
+To keep things simple, we always return a 500 response with the query error in the body.
+
+```haskell
+-- bytestring
+import Data.ByteString.Lazy.Char8
+
+f exceptT = Handler $ withExceptT (\queryError -> err500 {errBody = pack $ show queryError}) exceptT
+```
+
+---
+
+Now we are left with actually serving our API.
+
+Let's do it in a `src/Api/Application.hs` file.
+
+```haskell
+module Api.Application where
+```
+
+---
+
+First we can define an `Application` as
+
+```haskell
+import Api.AppServices
+import Api.Forms
+
+-- base
+import Data.Proxy
+
+-- servant-server
+import Servant
+
+app :: AppServices -> Application
+app appServices = serve (Proxy :: Proxy (NamedRoutes FormsApi)) (formsServer appServices)
+```
+
+---
+
+`Proxy` is an interesting data type, using a phantom type to pass information at the type level
+
+```haskell
+data Proxy a = Proxy
+```
+
+---
+
+We are missing an instance for `FromHttpApiData (Id Questionnaire)` used to parse the paths with the `Capture` section.
+
+We can just derive it.
+
+```haskell
+newtype Id a = Id UUID
+  deriving newtype (FromHttpApiData)
+```
+
+---
+
+At last, we can write our `main` function
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+-- base
+import Data.Maybe
+
+-- bytestring
+import Data.ByteString.Char8
+
+-- hasql
+import Hasql.Connection
+
+main :: IO ()
+main = do
+  connection <- acquire "host=postgres port=5432 dbname=db user=user password=pwd"
+  either
+    (fail . unpack . fromMaybe "unable to connect to the database")
+    (run 8080 . app . postgresAppServices)
+    connection
+```
+
+We try to connect to the database.
+
+If the connection fails we exit immediately with an error message.
+
+Otherwise, we build our `AppServices`, and we run our application on port 8080.
+
+---
+
+After all this, we can finally run our server!
+
+```bash
+stack exec forms
+```
+
+---
+
+Once the server is running we can start sending requests
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/create-questionnaire \
+  --header 'Content-Type: application/json' \
+  --data '{
+	"title": "a Questionnaire"
+}'
+```
+
+```bash
+curl --request GET \
+  --url http://localhost:8080/questionnaires
+```
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/add-question \
+  --header 'Content-Type: application/json' \
+  --data '{
+	"title": "a question",
+	"answerType": "Paragraph",
+	"questionnaireId": "d0243d02-13e1-46cc-98a2-25ec61bcb203"
+}'
+```
+
+```bash
+curl --request GET \
+  --url http://localhost:8080/questions/d0243d02-13e1-46cc-98a2-25ec61bcb203
+```
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/record-answer-set \
+  --header 'Content-Type: application/json' \
+  --data '[
+	{
+		"content": {
+			"tag": "Paragraph",
+			"contents": "the answer"
+		},
+		"questionId": "b4d8a29e-de67-4b14-b2c5-049ecece89f5"
+	}
+]'
+```
+
+```bash
+curl --request GET \
+  --url http://localhost:8080/answer-sets/d0243d02-13e1-46cc-98a2-25ec61bcb203
+```
+
+```bash
+curl --request GET \
+  --url http://localhost:8080/set-answers/33c9522f-527a-4f3d-9e65-3873e79a4229
+```
+
+```bash
+curl --request GET \
+  --url http://localhost:8080/question-answers/b4d8a29e-de67-4b14-b2c5-049ecece89f5
+```
+
+---
+
 ## Learned concepts
 
 - higher kinded data
