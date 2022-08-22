@@ -646,7 +646,7 @@ To be able to lift functions of higher [arity](https://en.wikipedia.org/wiki/Ari
 We need `Applicative`
 
 ```haskell
-class Applicative f where
+class Functor f => Applicative f where
   pure  :: a -> f a
   (<*>) :: f (a -> b) -> f a -> f b
 ```
