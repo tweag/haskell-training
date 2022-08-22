@@ -23,7 +23,6 @@ import Servant.API
 import Servant.API.Generic
 
 -- servant-server
-import Servant.Server
 import Servant.Server.Generic
 
 data FormsApi mode = FormsApi

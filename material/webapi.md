@@ -745,7 +745,7 @@ Now we're left with implementing a server which exposes the endpoints we defined
 
 ---
 
-We need to implement a server for out API data type
+We need to implement a server for our API data type
 
 ```haskell
 formsServer :: FormsApi AsServer
@@ -934,7 +934,7 @@ data AppServices = AppServices
 
 ---
 
-And use to simply our server definition a bit
+And use it to simplify our server definition a bit
 
 ```haskell
 import Api.AppServices
