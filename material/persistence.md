@@ -336,11 +336,33 @@ This focus on contexts is what makes monads so important in Haskell and why they
 
 ---
 
+```haskell
+class Applicative m => Monad m where
+  (>>=) :: m a -> (a -> m b) -> m b
+```
+
+To compute the result of `ma >>= f` we need to use `f`, which needs to use as argument something that can be obtained only through `ma`. This forces `ma` to be computed before `f`.
+
+---
+
+`(>>=)` is actually equivalent (exercise: try to prove it!) to
+
+```haskell
+(<=<) :: (b -> m c) -> (a -> m b) -> a -> m c
+
+-- compare it to
+(.)   :: (b ->   c) -> (a ->   b) -> a ->   c
+```
+
+Monads allow us to compose functions which produce results in a given context.
+
+---
+
 As you might expect, `IO` is a monad, and `Query` is a monad.
 
 ---
 
-And then we filter only the `questions` which have the correct `Id Questionnaire`
+We then filter only the `questions` which have the correct `Id Questionnaire`
 
 `Rel8` offers us a `where_` combinator which allows us to filter based on a criterion.
 
@@ -400,6 +422,18 @@ questionnaireQuestions questionnaireId = do
   question <- each questionSchema
   where_ $ questionQuestionnaireId question ==. lit questionnaireId
   pure question
+```
+
+---
+
+Exercise for you: try to write a query to retrieve all the answers for a given question
+
+```haskell
+questionAnswers :: Id Domain.Question -> Query (Answer Expr)
+questionAnswers questionId = do
+  answer <- each answerSchema
+  where_ $ answerQuestionId answer ==. lit questionId
+  pure answer
 ```
 
 ---
@@ -713,9 +747,9 @@ postgresQuestionnaireRepository connection = QuestionnaireRepository
 
 ---
 
-Last thing we need to do is return the newly crafted `id`. We need to be careful though to manage carefully the case in which the query actually failed. This is signalled by the `Either` returned by `run`.
+Last thing we need to do is return the newly crafted `id`. We need to be careful though to manage the case in which the query actually failed. This is signalled by the `Either` returned by `run`.
 
-The most sensible thing we can do is pass on the information to the caller
+The most sensible thing we can do is pass on the information back to the caller
 
 ```haskell
 postgresAddQuestionnaire :: Connection -> Domain.Questionnaire -> IO (Either QueryError (Id Domain.Questionnaire))
@@ -844,7 +878,7 @@ Similarly, we can implement all the other repositories `PostgresQuestionReposito
 
 Now we need to connect the domain to the concrete implementation of the repositories.
 
-The place to do that is the `AppServices` argument to our `fromsServer`.
+The place to do that is the `AppServices` argument to our `formsServer`.
 
 We need to build a `AppServices` using our newly created repositories.
 
@@ -932,7 +966,7 @@ Ouch, it doesn't work!
 
 ---
 
-This happens because when me there is a type variable in a function signature, the caller has the ability to choose the actual value of that type variable.
+This happens because when there is a type variable in a function signature, the caller has the ability to choose the actual value of that type variable.
 
 On the contrary, here we would like a function which works uniformly for every `a`, and then the implementation chooses the concrete `a` (even different ones) every time.
 
