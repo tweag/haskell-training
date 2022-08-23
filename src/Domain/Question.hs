@@ -18,9 +18,6 @@ import Data.OpenApi
 -- text
 import Data.Text
 
---uuid
-import Data.UUID
-
 data AnswerType
   = Paragraph
   | Number

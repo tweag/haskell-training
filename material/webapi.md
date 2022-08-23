@@ -760,6 +760,9 @@ Now we're left with implementing a server which exposes the endpoints we defined
 We need to implement a server for our API data type
 
 ```haskell
+-- servant-server
+import Servant.Server.Generic
+
 formsServer :: FormsApi AsServer
 formsServer = FormsApi
   { createNewQuestionnaire = _
@@ -901,6 +904,11 @@ data AnswerRepository m = AnswerRepository
 And we can use them to implement our API
 
 ```haskell
+import Domain.AnswerRepository as Answer
+import Domain.AnswerSetRepository as AnswerSet
+import Domain.QuestionRepository as Question
+import Domain.QuestionnaireRepository as Questionnaire
+
 formsServer
   :: QuestionnaireRepository Handler
   -> QuestionRepository Handler
