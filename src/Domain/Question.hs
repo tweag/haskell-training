@@ -26,8 +26,6 @@ data AnswerType
   | Number
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-newtype QuestionnaireId = QuestionnaireId UUID
-
 data Question = Question
   { title :: Text
   , answerType :: AnswerType

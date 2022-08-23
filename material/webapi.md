@@ -532,7 +532,7 @@ Next we would like to create an instance for `FromJSON Question`
 ```haskell
 {-# LANGUAGE InstanceSigs #-}
 
---aeson
+-- aeson
 import Data.Aeson.Types
 
 instance FromJSON Question where
@@ -554,6 +554,11 @@ Also in this case we want an object, so we can consider only that case
 Similarly to what we did above, we want to parse first all the single fields and then combine them into the `Question` data type.
 
 ```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+import Domain.Id
+import Domain.Questionnaire
+
   parseJSON (Object o) = _
     (o .: "title" :: Parser Text)
     (o .: "answer-type" :: Parser AnswerType)
