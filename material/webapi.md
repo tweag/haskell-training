@@ -112,7 +112,7 @@ dependencies:
 The last relevant entity is `Answer`, which is identified by its `content` and a `question` `id`
 
 ```haskell
-module Domain.Ansewr where
+module Domain.Answer where
 
 data Answer = Answer
   { content    :: Content
@@ -260,6 +260,9 @@ Next we can start defining the types of the actual endpoints.
 ```haskell
 {-# LANGUAGE DataKinds #-}
 
+import Domain.Id
+import Domain.Questionnaire
+
 -- servant
 import Servant.API
 
@@ -302,6 +305,8 @@ Similarly to the previous endpoint we specify:
 Try to write yourself the endpoint to add a new question
 
 ```haskell
+import Domain.Question
+
 data FormsApi mode = FormsApi
   { ...
   , addNewQuestion :: mode :- "add-question" :> ReqBody '[JSON] Question :> Post '[JSON] (Id Question)
@@ -332,6 +337,8 @@ This means that the actual path will be `questions/{questionnaireId}`.
 You can try now to complete the definition of all the other routes
 
 ```haskell
+import Domain.Answer
+
 data FormsApi mode = FormsApi
   { ...
   , recordAnswerSet :: mode :- "record-answer-set" :> ReqBody '[JSON] [Answer]                   :> Post '[JSON] (Id AnswerSet)
@@ -348,7 +355,7 @@ We are using `AnswerSet` to tag out `Id` type, but actually we never defined suc
 Since we are using it only as type level tag, it doesn't need to have any real constructor.
 
 ```haskell
-data AnswerSet = AnswerSet
+data AnswerSet
 ```
 
 ---
