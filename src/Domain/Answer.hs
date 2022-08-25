@@ -23,10 +23,17 @@ data Content
   | Number Int
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-data Answer = Answer
-  { content    :: Content
-  , questionId :: Id Question
+data AnswerData = AnswerData
+  { contentData    :: Content
+  , questionIdData :: Id Question
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data AnswerSet
+
+data Answer = Answer
+  { content    :: Content
+  , questionId :: Id Question
+  , setId      :: Id AnswerSet
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)

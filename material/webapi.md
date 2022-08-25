@@ -18,10 +18,10 @@ Let's start to think about the web API endpoints we would like to have:
 | retrieve all `questionnaire`s | `GET` || list of `questionnaire`s with their `id`s |
 | add new `question` to a `questionnaire` | `POST` | `title`, `answerType`, `questionnaire` `id` | `question` `id` |
 | retrieve `question`s for `questionnaire` | `GET` | `questionnaire` `id` | list of `question`s with their `id`s |
-| record `set` of `answer`s for a `questionnaire` | `POST` | list of `answer`s | `id` for the `set` of `answer`s |
+| record `set` of `answer`s for a `questionnaire` | `POST` | list of `answer`s with `content` and `question` `id` | `id` for the `set` of `answer`s |
 | retrieve `set`s of `answer`s for a `questionnaire` | `GET` | `questionnaire` `id` | list of `answer` `set` `id`s |
-| retrieve all `answer`s for a given `set` | `GET` | `answer` `set` `id` | list of `answer`s with their `id`s |
-| retrieve all `answer`s for a given `question` | `GET` | `question` `id` | list of `answer`s with their `id`s |
+| retrieve all `answer`s for a given `set` | `GET` | `answer` `set` `id` | list of `answer`s with their `id`s and `answer` `set` `id` |
+| retrieve all `answer`s for a given `question` | `GET` | `question` `id` | list of `answer`s with their `id`s and `answer` `set` `id` |
 
 ---
 
@@ -109,14 +109,22 @@ dependencies:
 
 ---
 
-The last relevant entity is `Answer`, which is identified by its `content` and a `question` `id`
+The last relevant entity is `Answer`, which has two versions.
+
+One with the `Id AnswerSet`, when we are returning it, and one without, when we are receiving it.
 
 ```haskell
 module Domain.Answer where
 
+data AnswerData = AnswerData
+  { contentData    :: Content
+  , questionIdData :: QuestionId
+  }
+
 data Answer = Answer
   { content    :: Content
   , questionId :: QuestionId
+  , setId      :: AnswerSetId
   }
 ```
 
@@ -135,13 +143,15 @@ data Content
 
 ---
 
-We can define `QuestionId` similarly to how we defined `QuestionnaireId`
+We can define `QuestionId` and `AnswerSetId` similarly to how we defined `QuestionnaireId`
 
 ```haskell
 --uuid
 import Data.UUID
 
 newtype QuestionId = QuestionId UUID
+
+newtype AnswerSetId = AnsewrSetId UUID
 ```
 
 ---
@@ -163,9 +173,19 @@ newtype Id a = Id UUID
 
 ---
 
-Now `Id Questionnaire`, `Id Question` and `Id Answer` are all containing a `UUID`, while being distinct at the type level.
+Now `Id Questionnaire`, `Id Question` and `Id AnswerSet` are all containing a `UUID`, while being distinct at the type level.
 
 We can now ditch `QuestionnaireId` and `QuestionId`.
+
+---
+
+We are using `AnswerSet` to tag out `Id` type, but actually we never defined such a data type.
+
+Since we are using it only as type level tag, it doesn't need to have any real constructor.
+
+```haskell
+data AnswerSet
+```
 
 ---
 
@@ -341,21 +361,11 @@ import Domain.Answer
 
 data FormsApi mode = FormsApi
   { ...
-  , recordAnswerSet :: mode :- "record-answer-set" :> ReqBody '[JSON] [Answer]                   :> Post '[JSON] (Id AnswerSet)
+  , recordAnswerSet :: mode :- "record-answer-set" :> ReqBody '[JSON] [AnswerData]               :> Post '[JSON] (Id AnswerSet)
   , answerSets      :: mode :- "answer-sets"       :> Capture "questionnaire" (Id Questionnaire) :> Get  '[JSON] [Id AnswerSet]
   , setIdAnswers    :: mode :- "set-answers"       :> Capture "set" (Id AnswerSet)               :> Get  '[JSON] [(Id Answer, Answer)]
   , questionAnswers :: mode :- "question-answers"  :> Capture "question" (Id Question)           :> Get  '[JSON] [(Id Answer, Answer)]
   }
-```
-
----
-
-We are using `AnswerSet` to tag out `Id` type, but actually we never defined such a data type.
-
-Since we are using it only as type level tag, it doesn't need to have any real constructor.
-
-```haskell
-data AnswerSet
 ```
 
 ---
@@ -881,7 +891,7 @@ import Domain.Id
 import Domain.Questionnaire
 
 data AnswerSetRepository m = AnswerSetRepository
-  { record              :: [Answer]         -> m (Id AnswerSet)
+  { record              :: [AnswerData]     -> m (Id AnswerSet)
   , allForQuestionnaire :: Id Questionnaire -> m [Id AnswerSet]
   }
 ```
