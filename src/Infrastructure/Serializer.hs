@@ -38,16 +38,16 @@ deserializeQuestion (Question id questionnaireId title answerType) = Identified
   , entity = Domain.Question title answerType questionnaireId
   }
 
-serializeAnswer :: Id Domain.AnswerSet -> Identified Domain.Answer -> Answer Result
-serializeAnswer setId (Identified answerId (Domain.Answer content questionId)) = Answer
-  { answerId = answerId
+serializeAnswer :: Id Domain.AnswerSet -> Identified Domain.AnswerData -> Answer Result
+serializeAnswer setId (Identified answerId (Domain.AnswerData content questionId)) = Answer
+  { answerId = Domain.answerDataIdIsAnswerId answerId
   , answerQuestionId = questionId
   , answerSetId = setId
   , answerContent = content
   }
 
 deserializeAnswer :: Answer Result -> Identified Domain.Answer
-deserializeAnswer (Answer id questionId _ content) = Identified
+deserializeAnswer (Answer id questionId answerSetId content) = Identified
   { id = id
-  , entity = Domain.Answer content questionId
+  , entity = Domain.Answer content questionId answerSetId
   }

@@ -26,7 +26,7 @@ postgresAnswerSetRepository connection = AnswerSetRepository
   , allForQuestionnaire = postgresAllAnswerSetsForQuestionnaire connection
   }
 
-postgresRecordAnswerSet :: Connection -> [Domain.Answer] -> ExceptT QueryError IO (Id Domain.AnswerSet)
+postgresRecordAnswerSet :: Connection -> [Domain.AnswerData] -> ExceptT QueryError IO (Id Domain.AnswerSet)
 postgresRecordAnswerSet connection answers = do
   answerSetId <- liftIO generate
   dbAnswers <- traverse

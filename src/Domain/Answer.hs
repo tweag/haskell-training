@@ -43,3 +43,6 @@ data Answer = Answer
   , setId      :: Id AnswerSet
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+answerDataIdIsAnswerId :: Id AnswerData -> Id Answer
+answerDataIdIsAnswerId (Id uuid) = Id uuid
