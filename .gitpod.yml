@@ -9,7 +9,12 @@ tasks:
   - command: |
       stack test
       docker-compose up
-      docker-compose run -T -e PGPASSWORD=pwd -v $PWD/schema.sql:/schema.sql postgres psql -h postgres -U user -d db -w -f /schema.sql
+
+ports:
+  - port: 5432
+    onOpen: ignore
+  - port: 8081
+    onOpen: open-browser
 
 vscode:
   extensions:

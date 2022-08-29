@@ -52,6 +52,14 @@ erDiagram
 
 ---
 
+We can create this schema by running
+
+```bash
+docker-compose run -T -e PGPASSWORD=pwd -v $PWD/schema.sql:/schema.sql postgres psql -h postgres -U user -d db -w -f /schema.sql
+```
+
+---
+
 Let's start working on a new file, say `Infrastructure/Persistence.hs`
 
 ```haskell
