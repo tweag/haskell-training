@@ -22,9 +22,13 @@ import Servant
 
 -- uuid
 import Data.UUID
+import Data.UUID.V4
 
 newtype Id a = Id UUID
   deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, FromHttpApiData, DBType, DBEq)
+
+generate :: IO (Id a)
+generate = Id <$> nextRandom
 
 data Identified a = Identified
   { id     :: Id a
