@@ -11,21 +11,11 @@ extra-source-files:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - bytestring
-  #- containers
-  #- extra
-  - hasql
-  #- mtl
   - openapi3
-  - rel8
-  #- semigroupoids
   - servant
   - servant-server
   - text
-  - transformers
   - uuid
-  #- wai
-  - warp
 
 ghc-options:
   -W
@@ -41,8 +31,6 @@ executables:
     main:           Main.hs
     dependencies:
       - haskell-training
-      #- bytestring
-      #- hasql
 
   openapi:
     source-dirs:    openapi
