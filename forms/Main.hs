@@ -1,6 +1,8 @@
 module Main where
 
-import qualified Api.Application as Application
+import Forms
 
 main :: IO ()
-main = Application.main
+main = do
+  answers <- askMultiple [whatIsYourName, howOldAreYou]
+  print answers

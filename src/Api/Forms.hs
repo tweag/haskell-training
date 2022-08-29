@@ -36,9 +36,7 @@ data FormsApi mode = FormsApi
   }
   deriving Generic
 
-formsServer
-  :: AppServices
-  -> FormsApi AsServer
+formsServer :: AppServices -> FormsApi AsServer
 formsServer (AppServices questionnaireRepository questionRepository answerSetRepository answerRepository) = FormsApi
   { createNewQuestionnaire = Questionnaire.add             questionnaireRepository
   , questionnaires         = Questionnaire.all             questionnaireRepository

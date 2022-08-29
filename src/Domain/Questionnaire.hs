@@ -4,7 +4,7 @@
 module Domain.Questionnaire where
 
 -- aeson
-import Data.Aeson.Types
+import Data.Aeson
 
 -- base
 import GHC.Generics
