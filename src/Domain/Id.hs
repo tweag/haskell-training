@@ -14,6 +14,9 @@ import GHC.Generics
 -- openapi3
 import Data.OpenApi
 
+-- rel8
+import Rel8
+
 -- servant-server
 import Servant
 
@@ -21,7 +24,7 @@ import Servant
 import Data.UUID
 
 newtype Id a = Id UUID
-  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, FromHttpApiData)
+  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, FromHttpApiData, DBType)
 
 data Identified a = Identified
   { id     :: Id a

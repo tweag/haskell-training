@@ -136,7 +136,7 @@ We are missing an instance for `DBType (Id Domain.Questionnaire)`, which we can 
 import Rel8
 
 newtype Id a = Id UUID
-  deriving newtype (FromJSON, ToJSON, ToSchema, ToParamSchema, DBType)
+  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, DBType)
 ```
 
 ---
