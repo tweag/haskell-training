@@ -24,7 +24,7 @@ import Servant
 import Data.UUID
 
 newtype Id a = Id UUID
-  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, FromHttpApiData, DBType)
+  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, FromHttpApiData, DBType, DBEq)
 
 data Identified a = Identified
   { id     :: Id a

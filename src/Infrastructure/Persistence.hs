@@ -15,6 +15,7 @@ import Domain.Question (AnswerType)
 import GHC.Generics
 
 -- rel8
+import qualified Rel8 as Insert (Insert(returning))
 import Rel8
 
 -- text
@@ -74,4 +75,47 @@ answerSchema = TableSchema
     , answerSetId      = "set_id"
     , answerContent    = "content"
     }
+  }
+
+-- SQL: SELECT * FROM questionnaire
+allQuestionnaires :: Query (Questionnaire Expr)
+allQuestionnaires = each questionnaireSchema
+
+-- SELECT * FROM question
+-- WHERE questionnaier_id = :questionnaire_id
+questionnaireQuestions :: Id Domain.Questionnaire -> Query (Question Expr)
+questionnaireQuestions questionnaireId = do
+  question <- each questionSchema
+  where_ $ questionQuestionnaireId question ==. lit questionnaireId
+  pure question
+
+-- SELECT * FROM answer
+-- WHERE question_id = :question_id
+questionAnswers :: Id Domain.Question -> Query (Answer Expr)
+questionAnswers questionId = do
+  answer <- each answerSchema
+  where_ $ answerQuestionId answer ==. lit questionId
+  pure answer
+
+-- SELECT * FROM answer
+-- WHERE set_id = :set_id
+answerSetAnswers :: Id Domain.AnswerSet -> Query (Answer Expr)
+answerSetAnswers setId = do
+  answer <- each answerSchema
+  where_ $ answerSetId answer ==. lit setId
+  pure answer
+
+questionnaireAnswerSets :: Id Domain.Questionnaire -> Query (Expr (Id Domain.AnswerSet))
+questionnaireAnswerSets questionnaireId = do
+  question <- questionnaireQuestions questionnaireId
+  answer <- each answerSchema
+  where_ $ answerQuestionId answer ==. questionId question
+  distinct . pure $ answerSetId answer
+
+add :: Rel8able f => TableSchema (f Name) -> [f Expr] -> Insert ()
+add schema rows' = Insert
+  { into             = schema
+  , rows             = values rows'
+  , onConflict       = Abort
+  , Insert.returning = pure ()
   }
