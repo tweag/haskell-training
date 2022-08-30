@@ -11,6 +11,7 @@ extra-source-files:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
+  - bytestring
   - hasql
   - openapi3
   - rel8
@@ -19,6 +20,7 @@ dependencies:
   - text
   - transformers
   - uuid
+  - warp
 
 ghc-options:
   -W
