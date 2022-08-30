@@ -2,6 +2,12 @@
 
 ---
 
+```
+https://gitpod.io#snapshot/1c93367c-4ed8-4ee1-9a10-9353a7834d3a
+```
+
+---
+
 The next step we want to tackle is persisting our data.
 
 ---
@@ -55,7 +61,7 @@ erDiagram
 We can create this schema by running
 
 ```bash
-docker-compose run -T -e PGPASSWORD=pwd -v $PWD/schema.sql:/schema.sql postgres psql -h postgres -U user -d db -w -f /schema.sql
+docker-compose run -e PGPASSWORD=pwd -v $PWD/schema.sql:/schema.sql postgres psql -h postgres -U user -d db -w -f /schema.sql
 ```
 
 ---
