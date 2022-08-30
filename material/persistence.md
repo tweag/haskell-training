@@ -186,90 +186,13 @@ This allows us to connect the Haskell representation of our data with the databa
 
 ---
 
-Now you could try to do the same thing for `Question` and `Answer`, following the schema presented above.
+We could do the same thing for `Question` and `Answer`, following the schema presented above.
 
 ---
 
-```haskell
-import qualified Domain.Answer as Domain
-import Domain.Answer (Content)
-import qualified Domain.Question as Domain
-import Domain.Question (AnswerType)
-
-data Question f = Question
-  { questionId              :: Column f (Id Domain.Question)
-  , questionQuestionnaireId :: Column f (Id Domain.Questionnaire)
-  , questionTitle           :: Column f Text
-  , questionAnswerType      :: Column f AnswerType
-  }
-  deriving (Generic, Rel8able)
-
-questionSchema :: TableSchema (Question Name)
-questionSchema = TableSchema
-  { name    = "question"
-  , schema  = Nothing
-  , columns = Question
-    { questionId              = "id"
-    , questionQuestionnaireId = "questionnaire_id"
-    , questionTitle           = "title"
-    , questionAnswerType      = "answer_type"
-    }
-  }
-
-data Answer f = Answer
-  { answerId         :: Column f (Id Domain.Answer)
-  , answerQuestionId :: Column f (Id Domain.Question)
-  , answerSetId      :: Column f (Id Domain.AnswerSet)
-  , answerContent    :: Column f Content
-  }
-  deriving (Generic, Rel8able)
-
-answerSchema :: TableSchema (Answer Name)
-answerSchema = TableSchema
-  { name    = "answer"
-  , schema  = Nothing
-  , columns = Answer
-    { answerId         = "id"
-    , answerQuestionId = "question_id"
-    , answerSetId      = "set_id"
-    , answerContent    = "content"
-    }
-  }
+```bash
+git checkout chapter3.1
 ```
-
----
-
-To use `AnswerType` and `Content`, they need to have an instance of `DBType`. Following [the documentation](https://rel8.readthedocs.io/en/latest/concepts/dbtype.html?highlight=ReadShow#deriving-dbtype-via-readshow) of `Rel8`, we can just cleverly derive it
-
-```haskell
-{-# LANGUAGE DerivingVia #-}
-
--- rel8
-import Rel8
-
-data AnswerType
-  = Paragraph
-  | Number
-  deriving stock (Read, Show, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-  deriving DBType via ReadShow AnswerType
-```
-
-```haskell
-{-# LANGUAGE DerivingVia #-}
-
--- rel8
-import Rel8
-
-data Content
-  = Paragraph Text
-  | Number Int
-  deriving stock (Generic, Read, Show)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-  deriving DBType via ReadShow Content
-```
-
----
 
 ---
 
@@ -370,6 +293,8 @@ As you might expect, `IO` is a monad, and `Query` is a monad.
 
 ---
 
+Let's go back to our query.
+
 We then filter only the `questions` which have the correct `Id Questionnaire`
 
 `Rel8` offers us a `where_` combinator which allows us to filter based on a criterion.
@@ -437,6 +362,8 @@ questionnaireQuestions questionnaireId = do
 Exercise for you: try to write a query to retrieve all the answers for a given question
 
 ```haskell
+-- SELECT * FROM answer
+-- WHERE question_id = :question_id
 questionAnswers :: Id Domain.Question -> Query (Answer Expr)
 questionAnswers questionId = do
   answer <- each answerSchema
@@ -446,81 +373,9 @@ questionAnswers questionId = do
 
 ---
 
-Now we would like to execute this last query and print results to the console
-
-We're not going to analyze the code in detail, we're just going to check that it works
-
----
-
-First, we need to be able to print some `Answer Result`
-
-```haskell
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
-
-deriving stock instance f ~ Result => Show (Answer f)
-```
-
----
-
-We need also to add a `Show` instance for the `Id a` data type.
-
-```haskell
-newtype Id a = Id UUID
-  deriving newtype (Show, ...)
-```
-
----
-
-Then we can write our `main` function to run the query and print its results
-
-```haskell
-{-# LANGUAGE OverloadedStrings #-}
-
-module Main where
-
-import Domain.Id
-import Infrastructure.Persistence
-
--- base
-import Data.Maybe
-
--- bytestring
-import Data.ByteString.Char8
-
--- hasql
-import Hasql.Connection
-import Hasql.Session
-
--- rel8
-import Rel8
-
--- uuid
-import Data.UUID
-
-main :: IO ()
-main = do
-  connection <- acquire "host=localhost port=5432 dbname=db user=user password=pwd"
-  either
-    (fail . unpack . fromMaybe "unable to connect to the database")
-    (\connection' -> do
-      response <- run (statement () . select $ questionAnswers (Id nil)) connection'
-      print response)
-    connection
-```
-
----
-
-And we can try to run it with
-
 ```bash
-stack exec forms
+git checkout chapter3.2
 ```
-
-The results will depend on the data you have in your database
-
----
 
 ---
 
@@ -611,6 +466,8 @@ We notice now that `generate` is operating in the `IO` context, while we are wor
 The easiest way to make it all work is to use `IO` instead of `m`, knowing that we might need to improve on it later.
 
 ```haskell
+import Domain.Id
+
 postgresQuestionnaireRepository :: QuestionnaireRepository IO
 
 postgresAddQuestionnaire :: Domain.Questionnaire -> IO (Id Domain.Questionnaire)
@@ -623,47 +480,7 @@ postgresAddQuestionnaire questionnaire = do
 
 Now we have all the data necessary to convert the domain representation to the database representation
 
----
-
-We provide all the conversion functions in a specific `Infrastructure.Serializer` module
-
-```haskell
-module Infrastructure.Serializer where
-
-import Domain.Id
-import qualified Domain.Questionnaire as Domain
-import Infrastructure.Persistence
-
--- rel8
-import Rel8
-
-serializeQuestionnaire :: Identified Domain.Questionnaire -> Questionnaire Result
-serializeQuestionnaire (Identified questionnaireId questionnaire) = _
-```
-
----
-
-Constructing a `Questionnaire Result` is easy. We just need to use the `Questionnaire` constructor
-
-```haskell
-serializeQuestionnaire (Identified questionnaireId questionnaire) = Questionnaire
-  { questionnaireId    = _
-  , questionnaireTitle = _
-  }
-```
-
----
-
-And then we just fill the holes using the input values
-
-```haskell
-import qualified Domain.Forms.Questionnaire as Questionnaire
-
-serializeQuestionnaire (Identified questionnaireId (Domain.Questionnaire title)) = Questionnaire
-  { questionnaireId    = questionnaireId
-  , questionnaireTitle = title
-  }
-```
+We get all the conversion functions ready in the `Infrastructure.Serializer` module
 
 ---
 
@@ -695,19 +512,7 @@ postgresAddQuestionnaire questionnaire = do
   _
 ```
 
-where `add` is a query we need to define in the `Persistence` module
-
-```haskell
-import qualified Rel8 as Insert (Insert(returning))
-
-add :: Rel8able f => TableSchema (f Name) -> [f Expr] -> Insert ()
-add schema rows' = Insert
-  { into             = schema
-  , rows             = values rows'
-  , onConflict       = Abort
-  , Insert.returning = pure ()
-  }
-```
+where `add` is a query we defined in the `Persistence` module
 
 ---
 
@@ -862,16 +667,6 @@ postgresAddQuestionnaire connection questionnaire = do
 Exercise for you: implement the `postgresAllQuestionnaires` function
 
 ```haskell
--- Infrastructure.Serializer
-
-deserializeQuestionnaire :: Questionnaire Result -> Identified Domain.Questionnaire
-deserializeQuestionnaire (Questionnaire id title) = Identified
-  { id = id
-  , entity = Domain.Questionnaire title
-  }
-
--- Infrastructure.PostgresQuestionnaireRepository
-
 postgresAllQuestionnaires :: Connection -> ExceptT QueryError IO [Identified Domain.Questionnaire]
 postgresAllQuestionnaires connection = do
   questionnaires <- ExceptT $ run (statement () . select $ DB.allQuestionnaires) connection
@@ -881,6 +676,12 @@ postgresAllQuestionnaires connection = do
 ---
 
 Similarly, we can implement all the other repositories `PostgresQuestionRepository`, `PostgresAnswerSetRepository` and `PostgresAnswerRepository`.
+
+---
+
+```bash
+git checkout chapter3.3
+```
 
 ---
 
@@ -1001,6 +802,12 @@ Similarly, we need a `hoist` function for the other repositories.
 
 ---
 
+```bash
+git checkout chapter3.4
+```
+
+---
+
 We can now progress with the definition of `postgresAppServices`
 
 ```haskell
@@ -1028,6 +835,12 @@ Now all four holes require a function `ExceptT QueryError IO a -> Handler a`.
 We can use the same function everywhere
 
 ```haskell
+-- hasql
+import Hasql.Session
+
+-- transformers
+import Control.Monad.Trans.Except
+
 postgresAppServices connection = AppServices
   { questionnaireRepository = Questionnaire.hoist f $ postgresQuestionnaireRepository connection
   , questionRepository      = Question.hoist      f $ postgresQuestionRepository connection
@@ -1110,17 +923,6 @@ data Proxy a = Proxy
 
 ---
 
-We are missing an instance for `FromHttpApiData (Id Questionnaire)` used to parse the paths with the `Capture` section.
-
-We can just derive it.
-
-```haskell
-newtype Id a = Id UUID
-  deriving newtype (FromHttpApiData)
-```
-
----
-
 At last, we can write our `main` function
 
 ```haskell
@@ -1134,6 +936,9 @@ import Data.ByteString.Char8
 
 -- hasql
 import Hasql.Connection
+
+-- warp
+import Network.Wai.Handler.Warp
 
 main :: IO ()
 main = do
@@ -1149,6 +954,12 @@ We try to connect to the database.
 If the connection fails we exit immediately with an error message.
 
 Otherwise, we build our `AppServices`, and we run our application on port 8080.
+
+---
+
+```bash
+git checkout chapter3.5
+```
 
 ---
 
