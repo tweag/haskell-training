@@ -12,19 +12,14 @@ dependencies:
   - aeson
   - base >= 4.7 && < 5
   - bytestring
-  #- containers
-  #- extra
   - hasql
-  #- mtl
   - openapi3
   - rel8
-  #- semigroupoids
   - servant
   - servant-server
   - text
   - transformers
   - uuid
-  #- wai
   - warp
 
 ghc-options:
@@ -52,3 +47,20 @@ executables:
       - aeson-pretty
       - bytestring
       - servant-openapi3
+
+tests:
+  forms-spec:
+    main:           Spec.hs
+    source-dirs:    spec
+    dependencies:
+      - haskell-training
+      - hspec
+      - QuickCheck
+
+  forms-doctest:
+    source-dirs:      test
+    main:             doctests.hs
+    ghc-options:      -threaded
+    dependencies:
+      - haskell-training
+      - doctest-parallel >= 0.1
