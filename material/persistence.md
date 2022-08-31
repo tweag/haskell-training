@@ -104,7 +104,7 @@ To distinguish between data types with the same name, we use qualified imports, 
 
 Now, what is that `f`?
 
-It describes the context (e.g. documentation/query expressions/results) in which the data need to be considered
+It describes the context (e.g. documentation/query expressions/results) in which the data needs to be considered
 
 ---
 
@@ -233,7 +233,7 @@ Next we want to retrieve all the `Question`s for a single `Questionnaire`.
 
 ```sql
 SELECT * FROM question
-WHERE questionnaier_id = :questionnaire_id
+WHERE questionnaire_id = :questionnaire_id
 ```
 
 ---
@@ -314,7 +314,7 @@ where the first `_` has type `Expr Bool`
 
 ---
 
-First we want to extract the `questionQuestionnaireId`.
+First we want to extract the `question` `questionnaireId`.
 
 We can use the `questionQuestionnaireId` field as a function
 
@@ -627,7 +627,7 @@ postgresQuestionnaireRepository :: Connection -> QuestionnaireRepository (Except
 
 Now `generate` is no more OK, because it returns something in `IO`, while here we are working in `ExceptT QueryError IO`.
 
-Luckily we have a function `liftIO :: IO a -> ExceptT e m a ` which allows us to lift values in `IO` to `EitherT e m`.
+Luckily we have a function `liftIO :: IO a -> ExceptT e IO a` which allows us to lift values in `IO` to `EitherT e m`.
 
 ```haskell
 -- base
