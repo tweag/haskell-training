@@ -174,3 +174,55 @@ There are several strategies to find good properties for our code. See for examp
 
 ---
 
+For example, we would like the perimeter of a rectangle to remain constant if we swap the sides
+
+```haskell
+      it "does not change for rectangles with swapped sides" $ do
+        perimeter (Rectangle s1 s2) `shouldBe` perimeter (Rectangle s2 s1)
+```
+
+---
+
+Does not work because `s1` and `s2` are not in scope
+
+Let's introduce them with an anonymous function
+
+```haskell
+      it "does not change for rectangles with swapped sides" $ do
+        \(s1, s2) -> perimeter (Rectangle s1 s2) `shouldBe` perimeter (Rectangle s2 s1)
+```
+
+---
+
+We're still not saying how these `s1` and `s2` should be generated.
+
+That is where `QuickCheck` is coming into play.
+
+```haskell
+-- QuickCheck
+import Test.QuickCheck
+```
+
+---
+
+We can use the [`forAll`](https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#v:forAll) function, which requires a [generator](https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#t:Gen).
+
+Since we want to test our property for every possible input, we would like it to be [`arbitrary`](https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#v:arbitrary).
+
+```haskell
+      it "does not change for rectangles with swapped sides" $ do
+        forAll arbitrary $
+          \(s1, s2) -> perimeter (Rectangle s1 s2) `shouldBe` perimeter (Rectangle s2 s1)
+```
+
+---
+
+We get
+
+```
++++ OK, passed 100 tests.
+```
+
+This means the test suite tried for 100 times
+
+---
