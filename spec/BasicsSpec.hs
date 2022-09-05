@@ -21,3 +21,7 @@ spec =
       it "does not change for rectangles with swapped sides" $ do
         forAll arbitrary $
           \(s1, s2) -> perimeter (Rectangle s1 s2) `shouldBe` perimeter (Rectangle s2 s1)
+
+      it "is zero only if the shape is degenerate" $ do
+        forAll (arbitrary `suchThat` ((== 0) . perimeter)) $
+          \shape -> shape `shouldSatisfy` isDegenerate

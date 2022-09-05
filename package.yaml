@@ -14,6 +14,7 @@ dependencies:
   - bytestring
   - hasql
   - openapi3
+  - QuickCheck
   - rel8
   - servant
   - servant-server
@@ -54,8 +55,11 @@ tests:
     source-dirs:    spec
     dependencies:
       - haskell-training
+      - containers
       - hspec
+      - microlens-platform
       - QuickCheck
+      - stm
 
   forms-doctest:
     source-dirs:      test
