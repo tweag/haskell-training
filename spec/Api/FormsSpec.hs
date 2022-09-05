@@ -3,6 +3,8 @@
 module Api.FormsSpec where
 
 import Api.Forms
+import Api.InMemoryState
+import Api.StatefulAppServices
 import Domain.Answer as Answer
 import Domain.Question as Question
 import Domain.Questionnaire
@@ -16,10 +18,14 @@ import Test.Hspec
 -- servant-server
 import Servant
 
+-- stm
+import Control.Concurrent.STM
+
 spec :: Spec
 spec =
   describe "Forms API" $ do
-    let forms = formsServer _
+    initialMemory <- runIO $ newTVarIO emptyState
+    let forms = formsServer $ statefulAppServices initialMemory
 
     describe "register answers endpoint" $ do
       it "fails if we do not register an answer for every question of the questionnaire" $ do

@@ -25,3 +25,10 @@ makeLensesFor
   , ("answers"       , "answersL"       )
   ]
   ''InMemoryState
+
+emptyState :: InMemoryState
+emptyState = InMemoryState
+  { questionnaires = empty
+  , questions = empty
+  , answers = empty
+  }
