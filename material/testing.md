@@ -712,3 +712,105 @@ Such a function is called [`atomically`](https://hackage.haskell.org/package/stm
 ```haskell
   atomically . modifyTVar memory . over questionnairesL $ insert id questionnaire
 ```
+
+---
+
+To implement the rest of the repositories just
+
+```bash
+git checkout chapter4.1
+```
+
+---
+
+Now that we have all the repositories, we can implement
+
+```haskell
+statefulAppServices = AppServices
+  { questionnaireRepository = _
+  , questionRepository      = _
+  , answerSetRepository     = _
+  , answerRepository        = _
+  }
+```
+
+---
+
+The repositories we implemented now live in `IO`, while `AppServices` requires them in the `Handler` context.
+
+As we did for the Postgres case, we can hoist them by mapping from one context to the other.
+
+In this case, it's enough to use `liftIO`.
+
+```haskell
+import Api.AppServices
+import Api.InMemoryState
+import Api.StatefulAnswerRepository
+import Api.StatefulAnswerSetRepository
+import Api.StatefulQuestionRepository
+import Api.StatefulQuestionnaireRepository
+import Domain.AnswerRepository as Answer
+import Domain.AnswerSetRepository as AnswerSet
+import Domain.QuestionnaireRepository as Questionnaire
+import Domain.QuestionRepository as Question
+
+-- base
+import Control.Monad.IO.Class
+
+-- stm
+import Control.Concurrent.STM
+
+statefulAppServices :: TVar InMemoryState -> AppServices
+statefulAppServices memory = AppServices
+  { questionnaireRepository = Questionnaire.hoist liftIO $ statefulQuestionnaireRepository memory
+  , questionRepository      = Question.hoist      liftIO $ statefulQuestionRepository memory
+  , answerSetRepository     = AnswerSet.hoist     liftIO $ statefulAnswerSetRepository memory
+  , answerRepository        = Answer.hoist        liftIO $ statefulAnswerRepository memory
+  }
+```
+
+---
+
+We can now use our `statefulAppServices` in our test
+
+```haskell
+import Api.StatefulAppServices
+
+    let forms = formsServer $ statefulAppServices _
+```
+
+---
+
+At last, we need to initialize our state.
+
+We would like to be initially empty
+
+```haskell
+emptyState :: InMemoryState
+emptyState = InMemoryState
+  { questionnaires = empty
+  , questions = empty
+  , answers = empty
+  }
+```
+
+---
+
+And, at last, use `newTVarIO` to initialize our mutable variable
+
+```haskell
+    initialMemory <- runIO $ newTVarIO emptyState
+    let forms = formsServer $ statefulAppServices initialMemory
+```
+
+---
+
+Now the test runs and we can finally see that it fails!
+
+Now it's up to you fixing it!
+
+---
+
+So long, and thanks for all the fish!
+
+---
