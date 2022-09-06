@@ -66,7 +66,7 @@ spec = _
 
 ---
 
-To write tests we use the quite common `describe` and `it` syntax
+To write tests we use the quite common `describe` and `it` functions
 
 ```haskell
 spec =
@@ -83,6 +83,7 @@ We use the `shouldBe` infix function to assert that two things should be equal
 ```haskell
 import Basics
 
+      it "returns 4 for a square of side 1" $ do
         perimeter (Square 1) `shouldBe` 4
 ```
 
@@ -177,7 +178,10 @@ There are several strategies to find good properties for our code. See for examp
 For example, we would like the perimeter of a rectangle to remain constant if we swap the sides
 
 ```haskell
-      it "does not change for rectangles with swapped sides" $ do
+-- hspec
+import Test.Hspec.QuickCheck
+
+      prop "does not change for rectangles with swapped sides" $ do
         perimeter (Rectangle s1 s2) `shouldBe` perimeter (Rectangle s2 s1)
 ```
 
@@ -188,31 +192,8 @@ Does not work because `s1` and `s2` are not in scope
 Let's introduce them with an anonymous function
 
 ```haskell
-      it "does not change for rectangles with swapped sides" $ do
-        \(s1, s2) -> perimeter (Rectangle s1 s2) `shouldBe` perimeter (Rectangle s2 s1)
-```
-
----
-
-We're still not saying how these `s1` and `s2` should be generated.
-
-That is where `QuickCheck` is coming into play.
-
-```haskell
--- QuickCheck
-import Test.QuickCheck
-```
-
----
-
-We can use the [`forAll`](https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#v:forAll) function, which requires a [generator](https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#t:Gen).
-
-Since we want to test our property for every possible input, we would like it to be [`arbitrary`](https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#v:arbitrary).
-
-```haskell
-      it "does not change for rectangles with swapped sides" $ do
-        forAll arbitrary $
-          \(s1, s2) -> perimeter (Rectangle s1 s2) `shouldBe` perimeter (Rectangle s2 s1)
+      prop "does not change for rectangles with swapped sides" $ do
+        \s1 s2 -> perimeter (Rectangle s1 s2) `shouldBe` perimeter (Rectangle s2 s1)
 ```
 
 ---
@@ -232,7 +213,7 @@ Next we want to try a property on the whole `Shape` data type.
 We are going to check whether it is true that `the perimeter is zero only if the shape is degenerate`
 
 ```haskell
-      it "is zero only if the shape is degenerate" $ do
+      prop "is zero only if the shape is degenerate" $ do
         _
 ```
 
@@ -249,20 +230,10 @@ isDegenerate (Circle r)        = r == 0
 
 ---
 
-Next, we can sketch our property test
-
-```haskell
-        forAll arbitrary $
-          \shape -> _
-```
-
----
-
 What we want to check is that the shape is degenerate
 
 ```haskell
-        forAll arbitrary $
-          \shape -> shape `shouldSatisfy` isDegenerate
+        \shape -> shape `shouldSatisfy` isDegenerate
 ```
 
 ---
@@ -332,10 +303,11 @@ Let's try to take a look at the [documentation](https://hackage.haskell.org/pack
 
 We have our generator, but actually we would like to restrict our test only to shapes which are degenerate.
 
-For this, we could use the [`suchThat`](https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck-Gen.html#v:suchThat) combinator.
+For this, we could use the [`forAll`](https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck.html#v:forAll) and [`suchThat`](https://hackage.haskell.org/package/QuickCheck-2.14.2/docs/Test-QuickCheck-Gen.html#v:suchThat) combinators.
 
 ```haskell
         forAll (arbitrary `suchThat` ((== 0) . perimeter)) $
+          \shape -> shape `shouldSatisfy` isDegenerate
 ```
 
 ---
@@ -649,7 +621,7 @@ Now we wrote the code to modify just the `questionnaires` field of the `InMemory
 We could (exercise for you!) write by hand a function
 
 ```haskell
-modifyQuestionnaires :: (Map (Id Questionnaire) Questionnaire -> Map (Id Questionnarie) Questionnaire)
+modifyQuestionnaires :: (Map (Id Questionnaire) Questionnaire -> Map (Id Questionnaire) Questionnaire)
                      -> InMemoryState -> InMemoryState
 ```
 
@@ -663,11 +635,23 @@ A `Lens s a` allows us to focus a value of type `a` inside a value of type `s`.
 
 Once we can focus on it, we can read its value, set a new value or modify it.
 
+```
+-----------------------
+|                     |
+|  s                  |
+|         -----       |
+|         | a |       |
+|         -----       |
+|                     |
+|                     |
+-----------------------
+```
+
 ---
 
 First we need to create the lenses for the `InMemoryState` data structure.
 
-We use `TemplateHaskell`, which is the Haskell extension to do metaprogramming (i.e. generating Haskell code)
+We use `TemplateHaskell`, which is the Haskell extension to do metaprogramming (i.e. generating Haskell code at compile-time)
 
 ```haskell
 {-# LANGUAGE TemplateHaskell #-}
