@@ -1,8 +1,14 @@
-# Basics
+---
+type: slide
+---
+
+# Haskell at Work - Basics
 
 ---
 
 Let's start by looking at some basic Haskell concepts and their syntax.
+
+---
 
 We're going to use a REPL to play a bit with the language
 
@@ -12,7 +18,9 @@ stack ghci
 
 ---
 
-As a functional programming language, Haskell is based on [expressions](https://en.wikipedia.org/wiki/Expression_(mathematics)) rather than statements. While statements instruct the program what to do, expressions are combinations of other expressions which evaluate to a value to describe what we want.
+As a functional programming language, Haskell is based on [expressions](https://en.wikipedia.org/wiki/Expression_(mathematics)) rather than statements.
+
+While statements instruct the program what to do, expressions are combinations of other expressions which evaluate to a value to describe what we want.
 
 ---
 
@@ -47,7 +55,7 @@ Evaluation of expressions is just simplification, as in mathematical expressions
 1764 == 1680 + 84
 1764 == 1764
 True
-̀̀```
+```
 
 ---
 
@@ -183,13 +191,16 @@ me = MkPerson
 
 stillMe :: Person
 stillMe = MkPerson "Marco Perone" 38
+```
+
 ---
 
 How do we use a `Person`?
 
 ```haskell
 personDetails :: Person -> String
-personDetails (MkPerson name age) = name ++ " is " ++ show age ++ " years old"
+personDetails (MkPerson name age)
+  = name ++ " is " ++ show age ++ " years old"
 ```
 
 ---
@@ -218,7 +229,13 @@ data TrafficLight
   = Green
   | Yellow
   | Red
+```
 
+---
+
+We can then define a function looking at every single case
+
+```haskell
 canIPass :: TrafficLight -> Bool
 canIPass Green  = True
 canIPass Yellow = True
@@ -248,7 +265,13 @@ data Shape
   = Rectangle {side1 :: Float, side2 :: Float}
   | Square {side :: Float}
   | Circle {radius :: Float}
+```
 
+---
+
+Now we can pattern match on the argument
+
+```haskell
 perimeter :: Shape -> Float
 perimeter (Rectangle side1 side2) = (side1 + side2) * 2
 perimeter (Square side)           = side * 4
@@ -257,7 +280,9 @@ perimeter (Circle radius)         = 2 * pi * radius
 
 ---
 
-In addition to working with concrete types, such as `Shape`, we can also work with polymorphic functions (think generics in other languages) where we have type variables instead of concrete types:
+In addition to working with concrete types, such as `Shape`, we can also work with polymorphic functions (think generics in other languages) where we have type variables instead of concrete types
+
+---
 
 ```
 > :t (:)
@@ -265,6 +290,8 @@ In addition to working with concrete types, such as `Shape`, we can also work wi
 ```
 
 The signature is telling us that `(:)` allows us to attach a new element of type `a` to a list of elements of type `a`, for any possible type `a`.
+
+---
 
 Concrete types always start with a capital letter, type variables always start with a lowercase character.
 

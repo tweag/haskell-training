@@ -1,4 +1,9 @@
-# Forms - testing
+---
+type: slide
+tags: tweag, training
+---
+
+# Haskell at Work - Testing
 
 ---
 
@@ -6,13 +11,17 @@ There is a big elephant in the room for the code we wrote up to now.
 
 We wrote the code, it compiles, but we are not checking that it behaves how we want.
 
+---
+
 Types are awesome and can encode a lot of information, but they are often not enough to guarantee the correct behavior of our application
 
 ---
 
 The first level of testing is just manual testing.
 
-Remember that you can use the REPL to test the code you wrote
+---
+
+You can use the REPL to test the code you wrote
 
 ```bash
 stack ghci
@@ -154,6 +163,8 @@ Now we can write our first doctest, right above the definition of our function
 
 Unit tests are great, but they help us only with case we thought about, they do not help us to discover cases we were not expecting.
 
+---
+
 To solve this, the [`QuickCheck`](https://hackage.haskell.org/package/QuickCheck) library was developed in the Haskell ecosystem.
 
 It enables to write property based tests, i.e. asserting that a property holds for basically and combination of the involved values.
@@ -169,9 +180,11 @@ tests:
 
 A property is just an invariant of our code, which should hold true for any possible combination of the relevant values.
 
+---
+
 There are several strategies to find good properties for our code. See for example:
-- https://medium.com/@nicolasdubien/find-the-best-properties-for-property-based-testing-ee2ed9d442e1
-- https://fsharpforfunandprofit.com/posts/property-based-testing-2/
+- [Find the best properties for Property Based Testing](https://medium.com/@nicolasdubien/find-the-best-properties-for-property-based-testing-ee2ed9d442e1)
+- [Choosing properties for property-based testing](https://fsharpforfunandprofit.com/posts/property-based-testing-2/)
 
 ---
 
@@ -316,6 +329,8 @@ Now the test is actually complete, and it runs as we wanted.
 
 Still, it fails.
 
+---
+
 It does so for a good reason. A rectangle with `x` and `-x` sides has actually perimeter `0`.
 
 And `QuickCheck` is able to catch that case every time.
@@ -325,6 +340,8 @@ And `QuickCheck` is able to catch that case every time.
 Now we want to raise a bit the level of our tests.
 
 In a TDD style, we would like to write a test for our application to check that, when we register answers for a questionnaire, there is actually an answer for every question.
+
+---
 
 First we will write the test to check it.
 
@@ -356,7 +373,7 @@ We need to perform a sequence of actions:
 
 Our `formsServer` is the value which gives us access to all these functionalities
 
-So let's suppose we have a value of type `FormsServer`
+So let's suppose we have a value of type `FormsApi AsServer`
 
 ```haskell
   describe "Forms API" $ do
@@ -397,6 +414,8 @@ spec =
 
 This does not work because `createNewQuestionnaire`, `addNewQuestion` and `recordAnswerSet` all return results in the `Handler` context, while `shouldSatify` lives in `IO`.
 
+---
+
 We should run the `Handler` context to get it back to `IO`.
 
 We could use [`runHandler`](https://hackage.haskell.org/package/servant-server-0.19.1/docs/Servant-Server.html#v:runHandler).
@@ -421,6 +440,8 @@ import Servant
 Now we need to fill the hole for the missing `AppServices` instance.
 
 One option would be to reuse the instance that we already have, `postgresAppServices`, but that would mean setting up a database instance just for testing. It would also make our test extremely slow.
+
+---
 
 We would prefer to keep our data in memory.
 
@@ -484,6 +505,8 @@ statefulAllQuestionnaires = _
 Before proceeding with the implementation, we need to decide how we want to make our repositories stateful.
 
 Pure code can not be stateful, so we need to introduce some new trick.
+
+---
 
 We actually have two possibilities:
 - use a [`State`](https://hackage.haskell.org/package/containers-0.6.6/docs/Data-Sequence-Internal.html#t:State) context
@@ -631,9 +654,9 @@ But I'd like to present you a more Haskell-y approach.
 
 I'd like to briefly introduce lenses, which are data structures used to access nested data structures.
 
-A `Lens s a` allows us to focus a value of type `a` inside a value of type `s`.
+---
 
-Once we can focus on it, we can read its value, set a new value or modify it.
+A `Lens s a` allows us to focus a value of type `a` inside a value of type `s`.
 
 ```
 -----------------------
@@ -646,6 +669,10 @@ Once we can focus on it, we can read its value, set a new value or modify it.
 |                     |
 -----------------------
 ```
+
+---
+
+Once we can focus on it, we can read its value, set a new value or modify it.
 
 ---
 
@@ -724,6 +751,8 @@ The repositories we implemented now live in `IO`, while `AppServices` requires t
 
 As we did for the Postgres case, we can hoist them by mapping from one context to the other.
 
+---
+
 In this case, it's enough to use `liftIO`.
 
 ```haskell
@@ -765,7 +794,7 @@ import Api.StatefulAppServices
 
 ---
 
-At last, we need to initialize our state.
+We need to initialize our state.
 
 We would like to be initially empty
 

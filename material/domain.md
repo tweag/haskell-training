@@ -1,4 +1,9 @@
-# Forms - Domain
+---
+type: slide
+tags: tweag, training
+---
+
+# Haskell at Work - Domain
 
 ---
 
@@ -25,9 +30,13 @@ data Question = MkQuestion
   }
 ```
 
+---
+
 We are introducing a new type `Question`, with a single constructor `MkQuestion` and two fields:
 - `title` of type `String`
 - `answerType` of type `AnswerType`
+
+---
 
 What is the type of `MkQuestion`, `title`, and `answerType`?
 
@@ -35,7 +44,9 @@ What is the type of `MkQuestion`, `title`, and `answerType`?
 
 Google Forms allows several options for the type of questions (e.g. paragraph, number, multiple choice, data, etc.)
 
-To avoid unnecessary complexity, we begin with forms which could ask questions which require either a text or an integer answer:
+To avoid unnecessary complexity, we begin with forms which could ask questions which require either a text or an integer answer.
+
+---
 
 ```haskell
 data AnswerType
@@ -52,6 +63,8 @@ Notice that the options for `AnswerType` are closed. It is not possible to add a
 ---
 
 Now we can start defining some actual questions. Try to define the questions `What is your name` and `How old are you?`.
+
+---
 
 ```haskell
 whatIsYourName :: Question
@@ -71,7 +84,9 @@ howOldAreYou = MkQuestion
 
 Next we should try to define what `Answer`s look like. It could either contain a paragraph of text or an integer.
 
-Try to define an `Answer` type
+Try to define yourself an `Answer` type
+
+---
 
 ```haskell
 data Answer
@@ -80,8 +95,6 @@ data Answer
 ```
 
 We are defining the `Answer` type, with two constructors `ParagraphAnswer` and `NumberAnswer`. What is their type?
-
----
 
 ---
 
@@ -103,13 +116,17 @@ Take a minute to try to implement this function.
 
 ---
 
-Beware, all functions in Haskell are pure! Does this mean that we need to define the answer to our questions at compile time? Not a friendly user interaction...
+Beware, all functions in Haskell are pure!
+
+Does this mean that we need to define the answer to our questions at compile time? Not a friendly user interaction...
 
 ---
 
 What exactly does `purity` mean?
 
 An expression is said to be [`referentially transparent`](https://www.wikiwand.com/en/Referential_transparency) if it can be replaced with its corresponding value without changing the program's behavior.
+
+---
 
 For example, `42 * 42 == 42 * 40 + 42 * 2` could be replaced anywhere with `True` without changing the semantics of the program.
 
@@ -143,7 +160,9 @@ What is ruled out by purity? The following can not be represented by pure functi
 - random values generation
 - ...
 
-This does not mean that these things are impossible in Haskell.
+---
+
+It does not mean that these things are impossible in Haskell.
 
 ---
 
@@ -152,6 +171,8 @@ To allow interaction with external world at runtime, we wrap the return type in 
 ```haskell
 ask :: Question -> IO Answer
 ```
+
+---
 
 This way we are saying that the result of the `ask` function is an interaction with the external world which produces a value of type `Answer`
 
@@ -177,7 +198,11 @@ getLine :: IO String
 
 ---
 
-Code in the `IO` context is by nature impure. As a result, the order in which operations are executed matters, just like in imperative languages. Haskell has a special notation to write sequential code, introduced by the [`do` keyword](https://en.m.wikibooks.org/wiki/Haskell/Simple_input_and_output)
+Code in the `IO` context is by nature impure. As a result, the order in which operations are executed matters, just like in imperative languages.
+
+---
+
+Haskell has a special notation to write sequential code, introduced by the [`do` keyword](https://en.m.wikibooks.org/wiki/Haskell/Simple_input_and_output)
 
 ```haskell
 foo :: a -> IO b
@@ -202,6 +227,8 @@ foo x = f x >>= g
 
 Try to write a function which reads a string from standard input and prints it on standard output
 
+---
+
 ```haskell
 parrot :: IO ()
 parrot = do
@@ -221,6 +248,8 @@ ask question = _
 ---
 
 Now `_` should contain a value of type `IO Answer`, which is a sequence of actions which, in the end, return a value of type `Answer`.
+
+---
 
 To introduce the sequence of actions to be performed, we use `do` notation
 
@@ -276,8 +305,7 @@ First we can create an `Answer` from a `String` using the `ParagraphAnswer` cons
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  putStrLn (title question)
-  answer <- getLine
+  ...
   case answerType question of
     Paragraph -> _ (ParagraphAnswer answer)
     Number    -> _
@@ -307,7 +335,7 @@ In the other case, where `answerType` is `Number`, we need to check whether the 
 
 Haskell does not provide casting between different types automatically. Everything needs to be explicit.
 
-We need to parse our `String` to check if it is an `Int`
+We need to parse our `String` to check if it contains an `Int`
 
 ---
 
@@ -343,7 +371,9 @@ data Either a b
   | Right b
 ```
 
-And is the default type used when a type needs to contain two separate options of a possibly different type.
+---
+
+It is the default type used when a type needs to contain two separate options of a possibly different type.
 
 It is often used for operations which might fail with an error message. Conventionally, the `Left` constructor is used for the failure case and the `Right` constructor for the success case.
 
@@ -367,8 +397,7 @@ Applying `parseInt` to `answer` we can now distinguish the cases where `answer` 
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  putStrLn (title question)
-  answer <- getLine
+  ...
   case answerType question of
     Paragraph -> pure (ParagraphAnswer answer)
     Number    ->
@@ -384,11 +413,7 @@ Similarly to what we did for the other case, if we are in the `Right` case, we c
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  putStrLn (title question)
-  answer <- getLine
-  case answerType question of
-    Paragraph -> pure (ParagraphAnswer answer)
-    Number    ->
+  ...
       case parseInt answer of
         Left errorMessage -> _
         Right intAnswer   -> pure (NumberAnswer intAnswer)
@@ -401,14 +426,13 @@ In the `Left` case, we want to inform the user that they did not provide a valid
 ```haskell
 ask :: Question -> IO Answer
 ask question = do
-  putStrLn (title question)
-  answer <- getLine
-  case answerType question of
-    Paragraph -> pure (ParagraphAnswer answer)
-    Number    ->
+  ...
       case parseInt answer of
         Left errorMessage -> do
-          putStrLn ("invalid integer: " <> errorMessage <> ". Try again")
+          putStrLn (  "invalid integer: "
+                   <> errorMessage
+                   <> ". Try again"
+                   )
           ask question
         Right intAnswer   -> pure (NumberAnswer intAnswer)
 ```
@@ -433,6 +457,8 @@ main = _
 ---
 
 Let's try to ask our `whatIsYourName` and `howOldAreYou` questions and then print the answers
+
+---
 
 ```haskell
 import Forms
@@ -529,8 +555,6 @@ stack exec forms
 
 ---
 
----
-
 Next, we want to be able to ask multiple questions one after the other
 
 ```haskell
@@ -594,11 +618,15 @@ main = do
 
 ---
 
+A `String` is defined as a [list of characters](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:String).
+
+This makes it easy to manipulate but not particularly performant. As a consequence, it is not recommended for usage in production.
+
+Use [`Text`](https://hackage.haskell.org/package/text-2.0/docs/Data-Text.html#t:Text) instead, which provides a similar API but is optimized for better performance.
+
 ---
 
-A `String` is defined as a [list of characters](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:String). This makes it easy to manipulate but not particularly performant. As a consequence, it is not recommended for usage in production. Use [`Text`](https://hackage.haskell.org/package/text-2.0/docs/Data-Text.html#t:Text) instead, which provides a similar API but is optimized for better performance.
-
-See also:
+For reference, see also:
 - https://www.fpcomplete.com/haskell/tutorial/string-types/
 - https://mmhaskell.com/blog/2017/5/15/untangling-haskells-strings
 - https://www.alexeyshmalko.com/2015/haskell-string-types/
@@ -664,24 +692,3 @@ Actually Haskell could add all the `fromString` for us! We can do this by enabli
 ---
 
 [Extensions](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/intro.html) are a mechanism to opt into (or out of) different language behaviors. They are basically feature flags for the compiler.
-
----
-## Learned concepts
-
-- define a data type
-- sum types
-- `IO`, `putStrLn` and `getLine`
-- `do` notation
-- `case` expressions
-- `pure` as a lifting mechanism
-- `Either` as a failure mechanism
-- `main` to run the code
-- typeclasses and instances
-- `deriving`
-- lists
-- pattern matching
-- `traverse`
-- `Text` over `String`
-- importing packages and modules
-- extensions and pragmas
-- qualified imports

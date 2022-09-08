@@ -1,8 +1,9 @@
-# Forms - Web API
-
+---
+type: slide
+tags: tweag, training
 ---
 
-Gitpod snapshot: https://gitpod.io#snapshot/5eeb1fc7-a7eb-4a93-9d70-e468c6f20c34
+# Haskell at Work - Web API
 
 ---
 
@@ -111,20 +112,26 @@ dependencies:
 
 The last relevant entity is `Answer`, which has two versions.
 
-One with the `Id AnswerSet`, when we are returning it, and one without, when we are receiving it.
+One with the `Id AnswerSet`, when we are returning it.
 
 ```haskell
 module Domain.Answer where
-
-data AnswerData = AnswerData
-  { contentData    :: Content
-  , questionIdData :: QuestionId
-  }
 
 data Answer = Answer
   { content    :: Content
   , questionId :: QuestionId
   , setId      :: AnswerSetId
+  }
+```
+
+---
+
+One without, when we are receiving it.
+
+```haskell
+data AnswerData = AnswerData
+  { contentData    :: Content
+  , questionIdData :: QuestionId
   }
 ```
 
@@ -160,6 +167,8 @@ All these similarly defined `Id`s really call for a refactoring unifying them in
 
 Still, we want to keep them distinct at the type level. This way, the type system will help us avoid any confusion among them.
 
+---
+
 We could use a [phantom type](https://wiki.haskell.org/Phantom_type), a type variable which is not referring to anything at the value level
 
 ```haskell
@@ -189,11 +198,11 @@ data AnswerSet
 
 ---
 
----
-
 Now that we completed defining our entities, we want to get back to the definition of the API.
 
 We want to encode all the information regarding our API in a single Haskell data type!
+
+---
 
 This is work for the awesome [`Servant`](https://hackage.haskell.org/package/servant-0.19) library.
 
@@ -240,8 +249,6 @@ data FormsApi = FormsApi
 
 It's just a record with one field for every endpoint we want to have.
 
-Mind that the holes do not work at the type level. It's just a placeholder for us.
-
 ---
 
 Now it's time for a Servant technicality. To make the machinery work, the `FormsApi` data type needs a `mode` type variable which is then used on every route
@@ -287,7 +294,9 @@ import Domain.Questionnaire
 import Servant.API
 
 data FormsApi mode = FormsApi
-  { createNewQuestionnaire :: mode :- "create-questionnaire" :> ReqBody '[JSON] Questionnaire :> Post '[JSON] (Id Questionnaire)
+  { createNewQuestionnaire :: mode :- "create-questionnaire"
+                           :> ReqBody '[JSON] Questionnaire
+                           :> Post '[JSON] (Id Questionnaire)
   , ...
   }
 ```
@@ -307,7 +316,8 @@ Now we want to define the endpoint to retrieve all questionnaires
 ```haskell
 data FormsApi mode = FormsApi
   { ...
-  , questionnaires :: mode :- "questionnaires" :> Get '[JSON] [(Id Questionnaire, Questionnaire)]
+  , questionnaires :: mode :- "questionnaires"
+                   :> Get '[JSON] [(Id Questionnaire, Questionnaire)]
   , ...
   }
 ```
@@ -324,12 +334,16 @@ Similarly to the previous endpoint we specify:
 
 Try to write yourself the endpoint to add a new question
 
+---
+
 ```haskell
 import Domain.Question
 
 data FormsApi mode = FormsApi
   { ...
-  , addNewQuestion :: mode :- "add-question" :> ReqBody '[JSON] Question :> Post '[JSON] (Id Question)
+  , addNewQuestion :: mode :- "add-question"
+                   :> ReqBody '[JSON] Question
+                   :> Post '[JSON] (Id Question)
   , ...
   }
 ```
@@ -341,7 +355,9 @@ Let's next write together the endpoint to retrieve all the questions for a speci
 ```haskell
 data FormsApi mode = FormsApi
   { ...
-  , questionnaireQuestions :: mode :- "questions" :> Capture "questionnaire" (Id Questionnaire) :> Get '[JSON] [(Id Question, Question)]
+  , questionnaireQuestions :: mode :- "questions"
+                           :> Capture "questionnaire" (Id Questionnaire)
+                           :> Get '[JSON] [(Id Question, Question)]
   , ...
   }
 ```
@@ -386,8 +402,6 @@ We can then use it in our API definition.
 
 ---
 
----
-
 Next, since we want to use `JSON` as our API language, we want to be able to encode to/decode from `JSON` all our domain entities.
 
 To do this we will use the `aeson` library
@@ -410,7 +424,9 @@ class FromJSON a where
   parseJSON :: Value -> Parser a
 ```
 
-where `Value` is a data type representing a `JSON` value
+---
+
+`Value` is a data type representing a `JSON` value
 
 ```haskell
 data Value
@@ -422,7 +438,9 @@ data Value
   | Null
 ```
 
-and [`Parser a`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#t:Parser) is the result of the parsing operation, which, if successful, returns a value of type `a`.
+---
+
+[`Parser a`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#t:Parser) is the result of the parsing operation, which, if successful, returns a value of type `a`.
 
 ---
 
@@ -459,6 +477,8 @@ instance FromJSON Questionnaire where
 We need to decide now what we want the JSON representation of a `Questionnaire` to be.
 
 I'd say it makes sense to use an object with a `title` field.
+
+---
 
 Hence, all other options other than `Object` will need to fail.
 
@@ -665,6 +685,8 @@ f <$> fa :: f (b -> c -> d)
 
 To be able to lift functions of higher [arity](https://en.wikipedia.org/wiki/Arity) (i.e. with more arguments) we need something more powerful than `Functor`.
 
+---
+
 We need `Applicative`
 
 ```haskell
@@ -761,8 +783,6 @@ newtype Questionnaire = Questionnaire
 
 ---
 
----
-
 Now we're left with implementing a server which exposes the endpoints we defined above.
 
 ---
@@ -810,6 +830,8 @@ We need to look at the endpoints to know which actions we actually need in the r
 
 The first two endpoints are dealing with `Questionnaire`.
 
+---
+
 They have type
 
 ```haskell
@@ -835,6 +857,8 @@ data QuestionnaireRepository = QuestionnaireRepository
 
 To remain detached from implementation details and allow for multiple implementations (e.g. production and testing) we will abstract over the context where we will operate.
 
+---
+
 Therefore, we add the context as a type variable to our repository
 
 ```haskell
@@ -846,6 +870,8 @@ data QuestionnaireRepository m = QuestionnaireRepository
   , all :: m [Identified Questionnaire]
   }
 ```
+
+---
 
 This is an abstraction which is quite unique to statically typed functional programming languages, using `higher kinded types`. It is not achievable just by using generics.
 
@@ -883,6 +909,8 @@ data QuestionRepository m = QuestionRepository
   }
 ```
 
+---
+
 ```haskell
 module Domain.AnswerSetRepository where
 
@@ -895,6 +923,8 @@ data AnswerSetRepository m = AnswerSetRepository
   , allForQuestionnaire :: Id Questionnaire -> m [Id AnswerSet]
   }
 ```
+
+---
 
 ```haskell
 module Domain.AnswerRepository where
@@ -936,8 +966,6 @@ formsServer questionnaireRepository questionRepository answerSetRepository answe
   , questionAnswers        = Answer.allForQuestion         answerRepository
   }
 ```
-
----
 
 ---
 
@@ -983,8 +1011,6 @@ formsServer (AppServices questionnaireRepository questionRepository answerSetRep
   , questionAnswers        = Answer.allForQuestion         answerRepository
   }
 ```
-
----
 
 ---
 
@@ -1095,17 +1121,3 @@ Now we can generate the actual documentation
 ```bash
 stack exec openapi > openapi.json
 ```
-
----
-
-# Learned concepts
-
-- `newtype`
-- phantom types
-- `Servant` API definition
-- encountered `TypeOperators` and `DataKinds`
-- `FromJSON` and parsers
-- functors and applicatives
-- `Generic` programming
-- abstract over a context (higher kinded types)
-- generating `OpenAPI` documentation

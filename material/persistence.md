@@ -1,10 +1,9 @@
-# Forms - Persistence
-
+---
+type: slide
+tags: tweag, training
 ---
 
-```
-https://gitpod.io#snapshot/1c93367c-4ed8-4ee1-9a10-9353a7834d3a
-```
+# Haskell at Work - Persistence
 
 ---
 
@@ -61,7 +60,11 @@ erDiagram
 We can create this schema by running
 
 ```bash
-docker-compose run -e PGPASSWORD=pwd -v $PWD/schema.sql:/schema.sql postgres psql -h postgres -U user -d db -w -f /schema.sql
+docker-compose run
+  -e PGPASSWORD=pwd
+  -v $PWD/schema.sql:/schema.sql
+  postgres psql
+  -h postgres -U user -d db -w -f /schema.sql
 ```
 
 ---
@@ -142,7 +145,13 @@ We are missing an instance for `DBType (Id Domain.Questionnaire)`, which we can 
 import Rel8
 
 newtype Id a = Id UUID
-  deriving newtype (FromJSON, ToJSON, ToSchema, ToParamSchema, DBType)
+  deriving newtype
+    ( FromJSON
+    , ToJSON
+    , ToSchema
+    , ToParamSchema
+    , DBType
+    )
 ```
 
 ---
@@ -225,6 +234,8 @@ allQuestionnaires :: Query (Questionnaire Expr)
 
 It means that `allQuestionnaires` is a `Query` producing `Questionnaire`s in the `Expr` context.
 
+---
+
 We use the `Expr` context to create valid typed SQL expressions.
 
 ---
@@ -241,7 +252,9 @@ WHERE questionnaire_id = :questionnaire_id
 We want to create a `Query` which produces `Question`s, given a specific `QuestionnaireId`
 
 ```haskell
-questionnaireQuestions :: Id Domain.Questionnaire -> Query (Question Expr)
+questionnaireQuestions
+  :: Id Domain.Questionnaire
+  -> Query (Question Expr)
 ```
 
 ---
@@ -349,7 +362,9 @@ Now we need a value of type `Expr (Id Questionnaire)` to fill our remaining hole
 We can use the [`lit`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:lit) function to lift our `Id Questionnaire` to the `Expr` context.
 
 ```haskell
-  where_ $ questionQuestionnaireId question ==. lit questionnaireId
+  where_
+    $   questionQuestionnaireId question
+    ==. lit questionnaireId
 ```
 
 ---
@@ -359,13 +374,17 @@ As a last step, we need to return a value
 ```haskell
 questionnaireQuestions questionnaireId = do
   question <- each questionSchema
-  where_ $ questionQuestionnaireId question ==. lit questionnaireId
+  where_
+    $   questionQuestionnaireId question
+    ==. lit questionnaireId
   pure question
 ```
 
 ---
 
 Exercise for you: try to write a query to retrieve all the answers for a given question
+
+---
 
 ```haskell
 -- SELECT * FROM answer
@@ -437,7 +456,10 @@ What we need to do is:
 The implementation we are looking for is clearly sequential. This means that the context `m` in which we are working needs to be a `Monad` and that we can use `do` notation.
 
 ```haskell
-postgresAddQuestionnaire :: Monad m => Domain.Questionnaire -> m (Id Domain.Questionnaire)
+postgresAddQuestionnaire
+  :: Monad m
+  => Domain.Questionnaire
+  -> m (Id Domain.Questionnaire)
 postgresAddQuestionnaire questionnaire = do
   _
 ```
@@ -447,7 +469,9 @@ postgresAddQuestionnaire questionnaire = do
 The `Monad m` constraint needs to be propagated to `postgresQuestionnaireRepository`
 
 ```haskell
-postgresQuestionnaireRepository :: Monad m => QuestionnaireRepository m
+postgresQuestionnaireRepository
+  :: Monad m
+  => QuestionnaireRepository m
 ```
 
 ---
@@ -476,7 +500,9 @@ import Domain.Id
 
 postgresQuestionnaireRepository :: QuestionnaireRepository IO
 
-postgresAddQuestionnaire :: Domain.Questionnaire -> IO (Id Domain.Questionnaire)
+postgresAddQuestionnaire
+  :: Domain.Questionnaire
+  -> IO (Id Domain.Questionnaire)
 postgresAddQuestionnaire questionnaire = do
   id <- generate
   _
@@ -513,7 +539,7 @@ import Rel8
 
 postgresAddQuestionnaire questionnaire = do
   id <- generate
-  let serializedQuestionnaire = serializeQuestionnaire id questionnaire
+  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
       addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
   _
 ```
@@ -568,11 +594,15 @@ postgresQuestionnaireRepository connection = QuestionnaireRepository
 
 Last thing we need to do is return the newly crafted `id`. We need to be careful though to manage the case in which the query actually failed. This is signalled by the `Either` returned by `run`.
 
+---
+
 The most sensible thing we can do is pass on the information back to the caller
 
 ```haskell
 postgresAddQuestionnaire :: Connection -> Domain.Questionnaire -> IO (Either QueryError (Id Domain.Questionnaire))
 ```
+
+---
 
 This does not work since the return type of `add` for a `QuestionnaireRepository` needs to be of the form `m (Id Questionnaire)`.
 
@@ -598,6 +628,8 @@ What do we gain?
 instance (Monad m) => Monad (ExceptT e m)
 ```
 
+---
+
 Moreover, the monad instance handles failures automatically, i.e.
 
 ```haskell
@@ -614,18 +646,27 @@ If `a` fails (i.e. it returns a `Left`), then `b` is skipped and the whole compu
 We can adapt our code to use `ExceptT QueryError IO`
 
 ```haskell
-postgresAddQuestionnaire :: Connection -> Domain.Questionnaire -> ExceptT QueryError IO (Id Domain.Questionnaire)
+postgresAddQuestionnaire
+  :: Connection
+  -> Domain.Questionnaire
+  -> ExceptT QueryError IO (Id Domain.Questionnaire)
 ```
+
+---
 
 we need to update also
 
 ```haskell
-postgresQuestionnaireRepository :: Connection -> QuestionnaireRepository (ExceptT QueryError IO)
+postgresQuestionnaireRepository
+  :: Connection
+  -> QuestionnaireRepository (ExceptT QueryError IO)
 ```
 
 ---
 
 Now `generate` is no more OK, because it returns something in `IO`, while here we are working in `ExceptT QueryError IO`.
+
+---
 
 Luckily we have a function `liftIO :: IO a -> ExceptT e IO a` which allows us to lift values in `IO` to `EitherT e m`.
 
@@ -643,6 +684,8 @@ postgresAddQuestionnaire connection questionnaire = do
 Similarly, `run` does not work because it returns a `IO (Either QueryError ())`.
 
 We just need to wrap it in the `ExceptT` newtype.
+
+---
 
 The code now becomes
 
@@ -672,6 +715,8 @@ postgresAddQuestionnaire connection questionnaire = do
 
 Exercise for you: implement the `postgresAllQuestionnaires` function
 
+---
+
 ```haskell
 postgresAllQuestionnaires :: Connection -> ExceptT QueryError IO [Identified Domain.Questionnaire]
 postgresAllQuestionnaires connection = do
@@ -694,6 +739,8 @@ git checkout chapter3.3
 Now we need to connect the domain to the concrete implementation of the repositories.
 
 The place to do that is the `AppServices` argument to our `formsServer`.
+
+---
 
 We need to build a `AppServices` using our newly created repositories.
 
@@ -756,6 +803,8 @@ Now the hole has type `m (Id Questionnaire) -> n (Id Questionnaire)`
 
 Let's turn our attention to the other hole, now. It has type `n [Identified Questionnaire]`.
 
+---
+
 We have `all :: m [Identified Questionnaire]`.
 
 ```haskell
@@ -769,6 +818,8 @@ If we use it we are left with a `m [Identified Questionnaire] -> n [Identified Q
 ---
 
 Notice now the similarity in the structure of both holes; they both have the form `m a -> n a`. Let's try to pass such a function as an argument.
+
+---
 
 ```haskell
 hoist :: (m a -> n a) -> QuestionnaireRepository m -> QuestionnaireRepository n
@@ -788,6 +839,8 @@ On the contrary, here we would like a function which works uniformly for every `
 ---
 
 To do this, we need to mention explicitly in our type that the provided function should work for all possible `a`.
+
+---
 
 We use the `forall` syntax to make that explicit.
 
@@ -955,6 +1008,8 @@ main = do
     connection
 ```
 
+---
+
 We try to connect to the database.
 
 If the connection fails we exit immediately with an error message.
@@ -979,6 +1034,8 @@ stack exec forms
 
 Once the server is running we can start sending requests
 
+---
+
 ```bash
 curl --request POST \
   --url http://localhost:8080/create-questionnaire \
@@ -988,10 +1045,14 @@ curl --request POST \
 }'
 ```
 
+---
+
 ```bash
 curl --request GET \
   --url http://localhost:8080/questionnaires
 ```
+
+---
 
 ```bash
 curl --request POST \
@@ -1004,10 +1065,14 @@ curl --request POST \
 }'
 ```
 
+---
+
 ```bash
 curl --request GET \
   --url http://localhost:8080/questions/d0243d02-13e1-46cc-98a2-25ec61bcb203
 ```
+
+---
 
 ```bash
 curl --request POST \
@@ -1024,15 +1089,21 @@ curl --request POST \
 ]'
 ```
 
+---
+
 ```bash
 curl --request GET \
   --url http://localhost:8080/answer-sets/d0243d02-13e1-46cc-98a2-25ec61bcb203
 ```
 
+---
+
 ```bash
 curl --request GET \
   --url http://localhost:8080/set-answers/33c9522f-527a-4f3d-9e65-3873e79a4229
 ```
+
+---
 
 ```bash
 curl --request GET \
@@ -1040,11 +1111,3 @@ curl --request GET \
 ```
 
 ---
-
-## Learned concepts
-
-- higher kinded data
-- deriving strategies and `newtype` deriving
-- `do` works for any `Monad`
-- separating interface from implementation
-- monad transformers
