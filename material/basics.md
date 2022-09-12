@@ -1,8 +1,44 @@
 ---
 type: slide
+tags: tweag, training
+slideOptions:
+  progress: true
+  controls: false
+  slideNumber: false
 ---
 
+<style>
+  .reveal pre {width: 100%; max-height: 600px;}
+  .reveal pre code {max-height: 600px;}
+</style>
+
 # Haskell at Work - Basics
+
+---
+
+We're going to use [Gitpod](https://www.gitpod.io/) to have development environments for free.
+
+I recommend to use Visual Studio Code - online
+
+---
+
+If you want to set up the project locally, you could use `nix` to manage all the dependencies of the project
+
+```bash
+nix-shell
+```
+
+---
+
+Otherwise, you could install [GHCup](https://www.haskell.org/ghcup/) and then use it to install `GHC 9.0.2`, `cabal`, `stack` and `hls`.
+
+Then install and configure the Haskell extension for your favourite IDE to integrate with the above tools (e.g. the [Haskell](https://marketplace.visualstudio.com/items?itemName=haskell.haskell) extension for Visual Studio Code)
+
+---
+
+[Stack](https://docs.haskellstack.org/en/stable/) is the build tool we will use throughout the course.
+
+We will always use it to interact with our codebase.
 
 ---
 
@@ -33,6 +69,9 @@ Let's start to try to write some expressions
 > 42 * 42
 1764
 
+> pi
+3.141592653589793
+
 > "hello"
 "hello"
 
@@ -59,6 +98,15 @@ True
 
 ---
 
+A good example of the difference between expressions and statements is `if`:
+
+```
+> if True then "hello" else "grrr"
+"hello"
+```
+
+---
+
 Every valid expression in Haskell has a type
 
 ```
@@ -70,6 +118,9 @@ Every valid expression in Haskell has a type
 
 > True && False :: Bool
 False
+
+> if True then "hello" else "grrr" :: String
+"hello"
 ```
 
 Notice that here we are not selecting a type, just making it explicit.
@@ -84,6 +135,9 @@ You can obtain the type of an expression in GHCi using `:t`
 
 > :t True
 True :: Bool
+
+> :t if True then "hello" else "grrr"
+if True then "hello" else "grrr" :: String
 ```
 
 ---
@@ -137,7 +191,9 @@ Let's now move to work in a file `src/Basics.hs`
 module Basics where
 ```
 
-Now we can run `stack build --file-watch` to recompile the file as soon as we edit it.
+---
+
+Now we can run `stack build --file-watch` to recompile the file as soon as we save it.
 
 ---
 
@@ -161,6 +217,12 @@ data Person = MkPerson
   , age  :: Int
   }
 ```
+
+---
+
+Pay attention that Haskell is an [indentation](https://en.m.wikibooks.org/wiki/Haskell/Indentation) sensitive language!
+
+> Code which is part of some expression should be indented further in than the beginning of that expression
 
 ---
 
