@@ -14,18 +14,18 @@ hi = "hi"
 
 ## functions
 
-Functions types are defined using the `->` symbol
+Functions types are denoted using the `->` symbol
 
 ```haskell
 foo :: Int -> Int -> Int -> Int
 foo i j k = i + j * k
 ```
 
-This means that `foo` is a function with 3 `Int` arguments.
+We can think of `foo` as a function with 3 `Int` arguments.
 
-Functions are curried by default (e.g. `f 1` is a function `Int -> Int -> Int`)
+Functions are curried by default (e.g. `foo 1` is a function `Int -> Int -> Int`)
 
-The same function could be written in an anonymous form as
+Similarly, we can write the function in an anonymous form as
 
 ```haskell
 \i j k -> i + j * k
@@ -34,7 +34,7 @@ The same function could be written in an anonymous form as
 ### function application
 
 Function application is denoted with whitespace.
-For example, `foo 1 2 3` equals `1 + 2 * 3 = 7`
+For example, `foo 1 2 3` means "apply `foo` to `1`, then `2`, then `3`" and reduces to `1 + 2 * 3` which further reduces to `7`
 
 ## data declaration
 
@@ -48,8 +48,8 @@ data Person = MkPerson
 ```
 
 `Person` is the name of the type.
-`MkPerson` is the constructor, which is a function `String -> Int -> Person`
-`name` and `age` are fields which have respectively type `Person -> String` and `Person -> Int`
+`MkPerson` is the constructor, which is a function of type `String -> Int -> Person`.
+`name` and `age` are fields which have respectively type `Person -> String` and `Person -> Int`.
 
 ### instantiating a value
 
@@ -61,6 +61,8 @@ me = MkPerson
   { name = "Marco Perone"
   , age = 38
   }
+
+or equivalently like this
 
 stillMe :: Person
 stillMe = MkPerson "Marco Perone" 38
@@ -97,4 +99,4 @@ Concrete types always start with a capital letter, type variables (i.e. generics
 (:) :: a -> [a] -> [a]
 ```
 
-The signature is telling us that `(:)` allows us to attach a new element of type `a` to a list of elements of type `a`, for any possible type `a`.
+The signature is telling us that `(:)` allows us to combine an element of type `a` and a list of elements of type `a` to create another list of elements of type `a`, for any possible type `a`.

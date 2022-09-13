@@ -98,7 +98,7 @@ True
 
 ---
 
-A good example of the difference between expressions and statements is `if`:
+A good example of the difference between expressions (in Haskell) and statements (in imperative languages) is `if`:
 
 ```
 > if True then "hello" else "grrr"
