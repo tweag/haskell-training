@@ -1,13 +1,23 @@
 ---
 type: slide
 tags: tweag, training
+slideOptions:
+  progress: true
+  controls: false
+  slideNumber: false
 ---
+
+<style>
+  .reveal pre {width: 100%; max-height: 600px;}
+  .reveal pre code {max-height: 600px;}
+  code {color: #c7254e;}
+</style>
 
 # Haskell at Work - Domain
 
 ---
 
-In this first chapter, we want to start creating a simplified clone of Google Forms. That is, we want to create a web app which allows us to create questionnaires and submit answers to them.
+In this first chapter, we want to start creating a simplified clone of Google Forms.
 
 ---
 
@@ -21,7 +31,9 @@ module Forms where
 
 ---
 
-We define a `Question` by its title, some text containing the actual question, and the type required for the answer:
+We define a `Question` by its title, some text containing the actual question, and the type required for the answer
+
+---
 
 ```haskell
 data Question = MkQuestion
@@ -29,8 +41,6 @@ data Question = MkQuestion
   , answerType :: AnswerType
   }
 ```
-
----
 
 We are introducing a new type `Question`, with a single constructor `MkQuestion` and two fields:
 - `title` of type `String`
@@ -41,8 +51,6 @@ We are introducing a new type `Question`, with a single constructor `MkQuestion`
 What is the type of `MkQuestion`, `title`, and `answerType`?
 
 ---
-
-Google Forms allows several options for the type of questions (e.g. paragraph, number, multiple choice, data, etc.)
 
 To avoid unnecessary complexity, we begin with forms which could ask questions which require either a text or an integer answer.
 
@@ -55,10 +63,6 @@ data AnswerType
 ```
 
 We are defining another type `AnswerType` with two constructors `Paragraph` and `Number`. What is their type?
-
----
-
-Notice that the options for `AnswerType` are closed. It is not possible to add another option without modifying the actual definition.
 
 ---
 
@@ -82,7 +86,7 @@ howOldAreYou = MkQuestion
 
 ---
 
-Next we should try to define what `Answer`s look like. It could either contain a paragraph of text or an integer.
+Next we should try to define what `Answer`s look like. They could either contain a paragraph of text or an integer.
 
 Try to define yourself an `Answer` type
 
@@ -97,8 +101,6 @@ data Answer
 We are defining the `Answer` type, with two constructors `ParagraphAnswer` and `NumberAnswer`. What is their type?
 
 ---
-
-Now we have an extremely basic model for our domain.
 
 Next we want to try interacting with the user, asking them a question and letting them reply with an answer.
 
@@ -124,6 +126,8 @@ Does this mean that we need to define the answer to our questions at compile tim
 
 What exactly does `purity` mean?
 
+---
+
 An expression is said to be [`referentially transparent`](https://www.wikiwand.com/en/Referential_transparency) if it can be replaced with its corresponding value without changing the program's behavior.
 
 ---
@@ -132,13 +136,27 @@ For example, `42 * 42 == 42 * 40 + 42 * 2` could be replaced anywhere with `True
 
 ---
 
-A function is called `pure` if `f x` is referentially transparent for any possible input `x`.
+A function `f` is called `pure` if `f x` is referentially transparent for any possible input `x`.
+
+---
+
+Equivalently, if `y = f x`, we could substitute `f x` with `y` without modifying our program
 
 ---
 
 Practically, what does _purity_ means?
 
 It means that we can replace any function `f` with a lookup table which assigns to any input `x` its output `f x`
+
+---
+
+Are these functions pure?
+
+- [Math.random](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random) (more details [here](https://imgs.xkcd.com/comics/random_number.png))
+- [Date.now](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/now)
+- [console.log](https://developer.mozilla.org/en-US/docs/Web/API/console/log)
+- [Array.push](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push)
+- [API.fetch](https://developer.mozilla.org/en-US/docs/Web/API/fetch)
 
 ---
 
@@ -177,10 +195,10 @@ ask :: Question -> IO Answer
 This way we are saying that the result of the `ask` function is an interaction with the external world which produces a value of type `Answer`
 
 See also
-- https://wiki.haskell.org/Introduction_to_IO
-- https://wiki.haskell.org/Introduction_to_Haskell_IO/Actions
-- https://www.haskellforall.com/2013/01/introduction-to-haskell-io.html
-- http://learnyouahaskell.com/input-and-output
+- [Introduction to IO](https://wiki.haskell.org/Introduction_to_IO)
+- [Introduction to Haskell IO Actions](https://wiki.haskell.org/Introduction_to_Haskell_IO/Actions)
+- [Introduction to Haskell IO](https://www.haskellforall.com/2013/01/introduction-to-haskell-io.html)
+- [Input and output](http://learnyouahaskell.com/input-and-output)
 
 ---
 
@@ -215,6 +233,8 @@ foo x = do
 ---
 
 The `do` notation is just syntactic sugar. There's no real value in it, it only makes the code cuter.
+
+---
 
 The code we write above we could have actually written as
 
@@ -284,7 +304,11 @@ ask question = do
 
 ---
 
-Now `answer` is of type `String`. It's exactly what we want for a `Paragraph` question, not really for a `Number` one. Therefore, we need to distinguish the two cases. We need a `case` statement
+Now `answer` is of type `String`. It's exactly what we want for a `Paragraph` question, not really for a `Number` one. Therefore, we need to distinguish the two cases.
+
+---
+
+We need a `case` statement
 
 ```haskell
 ask :: Question -> IO Answer
@@ -300,6 +324,8 @@ ask question = do
 
 In the `Paragraph` case we have a `String`, and we need to return an `IO Answer`.
 
+---
+
 First we can create an `Answer` from a `String` using the `ParagraphAnswer` constructor
 
 ```haskell
@@ -314,6 +340,8 @@ ask question = do
 ---
 
 Now we are missing a function `Answer -> IO Answer`. We need to lift our value into the `IO` context.
+
+---
 
 We can use `pure :: a -> IO a`
 
@@ -349,9 +377,14 @@ parseInt :: String -> Int
 
 Actually, not every text contains an integer, so we need a way to fail somehow.
 
+---
+
 Remember that functions in Haskell are pure, which means, among other things, that we need to return a result for every input.
 
-Notice: Haskell has exceptions (only in `IO`, though).
+We do not throw exceptions
+
+note:
+  Notice: Haskell has exceptions (only in `IO`, though).
 
 ---
 
@@ -374,6 +407,8 @@ data Either a b
 ---
 
 It is the default type used when a type needs to contain two separate options of a possibly different type.
+
+---
 
 It is often used for operations which might fail with an error message. Conventionally, the `Left` constructor is used for the failure case and the `Right` constructor for the success case.
 
@@ -478,7 +513,7 @@ It is the `Show` type class, which provides a `show :: Show a => a -> String` fu
 
 ---
 
-But, what is a type class?
+But, what is a [type class](https://www.schoolofhaskell.com/school/starting-with-haskell/introduction-to-haskell/5-type-classes)?
 
 It's the Haskell mechanism for ad-hoc polymorphism (think interfaces in OOP).
 
@@ -618,6 +653,10 @@ main = do
 
 ---
 
+## Appendix - `Text`
+
+---
+
 A `String` is defined as a [list of characters](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:String).
 
 This makes it easy to manipulate but not particularly performant. As a consequence, it is not recommended for usage in production.
@@ -627,10 +666,10 @@ Use [`Text`](https://hackage.haskell.org/package/text-2.0/docs/Data-Text.html#t:
 ---
 
 For reference, see also:
-- https://www.fpcomplete.com/haskell/tutorial/string-types/
-- https://mmhaskell.com/blog/2017/5/15/untangling-haskells-strings
-- https://www.alexeyshmalko.com/2015/haskell-string-types/
-- https://free.cofree.io/2020/05/06/string-types/
+- [String types](https://www.fpcomplete.com/haskell/tutorial/string-types/)
+- [Untangling Haskell's strings](https://mmhaskell.com/blog/2017/5/15/untangling-haskells-strings)
+- [Haskell string types](https://www.alexeyshmalko.com/2015/haskell-string-types/)
+- [String types](https://free.cofree.io/2020/05/06/string-types/)
 
 ---
 
@@ -683,7 +722,9 @@ We could add a [`fromString`](https://hackage.haskell.org/package/base/docs/Data
 
 ---
 
-Actually Haskell could add all the `fromString` for us! We can do this by enabling the `OverloadedStrings` extension. One way to do this is using a [pragma](https://wiki.haskell.org/Language_Pragmas) on top of our module:
+Actually Haskell could add all the `fromString` for us!
+
+We can do this by enabling the `OverloadedStrings` extension. One way to do this is using a [pragma](https://wiki.haskell.org/Language_Pragmas) on top of our module:
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}

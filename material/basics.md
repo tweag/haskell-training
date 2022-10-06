@@ -10,6 +10,7 @@ slideOptions:
 <style>
   .reveal pre {width: 100%; max-height: 600px;}
   .reveal pre code {max-height: 600px;}
+  code {color: #c7254e;}
 </style>
 
 # Haskell at Work - Basics
@@ -151,7 +152,7 @@ You can assign names to expressions and refer to those names in other expression
 "hello"
 ```
 
-The expression `x` is completely equivalent to the expression "hello".
+The expression `x` is completely equivalent to the expression `"hello"`.
 
 They could be substituted interchangeably.
 
@@ -292,6 +293,10 @@ data TrafficLight
   | Yellow
   | Red
 ```
+
+---
+
+Notice that the options for `TrafficLight` are closed. It is not possible to add another option without modifying the actual definition.
 
 ---
 
