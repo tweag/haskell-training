@@ -1,28 +1,116 @@
 ---
 type: slide
 tags: tweag, training
+slideOptions:
+  progress: true
+  controls: false
+  slideNumber: false
 ---
+
+<style>
+  .reveal pre {width: 100%; max-height: 600px;}
+  .reveal pre code {max-height: 600px;}
+  code {color: #c7254e;}
+</style>
 
 # Haskell at Work - Web API
 
 ---
 
-In this second chapter we want to transform our terminal application into a more structured web API which somehow resembles the functioning of Google Forms
+In this second chapter we want to transform our terminal application into a more structured web API.
 
 ---
 
-Let's start to think about the web API endpoints we would like to have:
+Let's start to think about the web API endpoints we would like to have.
 
-| request | method | request | response |
-| ------- | ------ | ------- | -------- |
-| create a new `questionnaire` | `POST` | `questionnaire` `title` | `questionnaire` `id` |
-| retrieve all `questionnaire`s | `GET` || list of `questionnaire`s with their `id`s |
-| add new `question` to a `questionnaire` | `POST` | `title`, `answerType`, `questionnaire` `id` | `question` `id` |
-| retrieve `question`s for `questionnaire` | `GET` | `questionnaire` `id` | list of `question`s with their `id`s |
-| record `set` of `answer`s for a `questionnaire` | `POST` | list of `answer`s with `content` and `question` `id` | `id` for the `set` of `answer`s |
-| retrieve `set`s of `answer`s for a `questionnaire` | `GET` | `questionnaire` `id` | list of `answer` `set` `id`s |
-| retrieve all `answer`s for a given `set` | `GET` | `answer` `set` `id` | list of `answer`s with their `id`s and `answer` `set` `id` |
-| retrieve all `answer`s for a given `question` | `GET` | `question` `id` | list of `answer`s with their `id`s and `answer` `set` `id` |
+---
+
+Create a new `questionnaire`
+
+|||
+| --- | --- |
+| **method** | `POST` |
+| **request** | `questionnaire` `title` |
+| **response** | `questionnaire` `id` |
+|||
+
+---
+
+Retrieve all `questionnaire`s
+
+|||
+| --- | --- |
+| **method** | `GET` |
+| **request** ||
+| **response** | list of `questionnaire`s with their `id`s |
+|||
+
+---
+
+Add new `question` to a `questionnaire`
+
+|||
+| --- | --- |
+| **method** | `POST` |
+| **request** | `title`, `answerType`, `questionnaire` `id` |
+| **response** | `question` `id` |
+|||
+
+---
+
+Retrieve `question`s for `questionnaire` 
+
+|||
+| --- | --- |
+| **method** | `GET` |
+| **request** | `questionnaire` `id` |
+| **response** | list of `question`s with their `id`s |
+|||
+
+---
+
+Record `set` of `answer`s for a `questionnaire`
+
+|||
+| --- | --- |
+| **method** | `POST` |
+| **request** | list of `answer`s with `content` and `question` `id` |
+| **response** | `id` for the `set` of `answer`s |
+|||
+
+---
+
+Retrieve `set`s of `answer`s for a `questionnaire`
+
+|||
+| --- | --- |
+| **method** | `GET` |
+| **request** | `questionnaire` `id` |
+| **response** | list of `answer` `set` `id`s |
+|||
+
+---
+
+Retrieve all `answer`s for a given `set`
+
+|||
+| --- | --- |
+| **method** | `GET` |
+| **request** | `answer` `set` `id` |
+| **response** | list of `answer`s with their `id`s and `answer` `set` `id` |
+|||
+
+---
+
+
+Retrieve all `answer`s for a given `question`
+
+|||
+| --- | --- |
+| **method** | `GET` |
+| **request** | `question` `id` |
+| **response** | list of `answer`s with their `id`s and `answer` `set` `id` |
+|||
 
 ---
 
@@ -31,6 +119,8 @@ What we would like to do now is to encode this information in our code, so that 
 ---
 
 As a first step, we want to define some data types to describe the payloads of our requests and responses.
+
+---
 
 This will help us to work with a high level representation of the data we actually want to transmit on the network.
 
@@ -41,31 +131,39 @@ Let's start from a `Questionnaire`, which is characterized just by its title
 ```haskell
 module Domain.Questionnaire where
 
--- text
-import Data.Text
-
 data Questionnaire = Questionnaire
   { title :: Text
   }
+```
+
+note:
+```
+-- text
+import Data.Text
 ```
 
 ---
 
 Next we want to think about `Question`s.
 
-To add a new question to a `Questionnaire` we actually need the `Question` `title`, `answerType` and `Questionnaire` `id`
+---
+
+To add a new `Question` to a `Questionnaire` we actually need its `title`, `answerType` and `Questionnaire` `id`
 
 ```haskell
 module Domain.Question where
-
--- text
-import Data.Text
 
 data Question = Question
   { title           :: Text
   , answerType      :: AnswerType
   , questionnaireId :: QuestionnaireId
   }
+```
+
+note:
+```
+-- text
+import Data.Text
 ```
 
 ---
@@ -83,15 +181,18 @@ data AnswerType
 For the `QuestionnaireId` we want to use a `UUID` using a newtype to distinguish it from other `id`s.
 
 ```haskell
+newtype QuestionnaireId = QuestionnaireId UUID
+```
+
+note:
+```
 -- uuid
 import Data.UUID
-
-newtype QuestionnaireId = QuestionnaireId UUID
 ```
 
 ---
 
-We are using a [`newtype`](https://wiki.haskell.org/Newtype). It wraps a single data type to create a different data type with the same runtime representation.
+We are using a [`newtype`](https://wiki.haskell.org/Newtype). It wraps a single data type to create a new one with the same runtime representation.
 
 ```haskell
 newtype Age = Age Int
@@ -111,6 +212,8 @@ dependencies:
 ---
 
 The last relevant entity is `Answer`, which has two versions.
+
+---
 
 One with the `Id AnswerSet`, when we are returning it.
 
@@ -140,12 +243,15 @@ data AnswerData = AnswerData
 The `Content` data type is just what we were calling `Answer` in our previous chapter
 
 ```haskell
--- text
-import Data.Text
-
 data Content
   = Paragraph Text
   | Number Int
+```
+
+note:
+```
+-- text
+import Data.Text
 ```
 
 ---
@@ -153,12 +259,15 @@ data Content
 We can define `QuestionId` and `AnswerSetId` similarly to how we defined `QuestionnaireId`
 
 ```haskell
---uuid
-import Data.UUID
-
 newtype QuestionId = QuestionId UUID
 
 newtype AnswerSetId = AnsewrSetId UUID
+```
+
+note:
+```
+--uuid
+import Data.UUID
 ```
 
 ---
@@ -174,21 +283,26 @@ We could use a [phantom type](https://wiki.haskell.org/Phantom_type), a type var
 ```haskell
 module Domain.Id where
 
+newtype Id a = Id UUID
+```
+
+note:
+```
 --uuid
 import Data.UUID
-
-newtype Id a = Id UUID
 ```
 
 ---
 
 Now `Id Questionnaire`, `Id Question` and `Id AnswerSet` are all containing a `UUID`, while being distinct at the type level.
 
+---
+
 We can now ditch `QuestionnaireId` and `QuestionId`.
 
 ---
 
-We are using `AnswerSet` to tag out `Id` type, but actually we never defined such a data type.
+We are using `AnswerSet` to tag our `Id` type, but actually we never defined such a data type.
 
 Since we are using it only as type level tag, it doesn't need to have any real constructor.
 
@@ -208,15 +322,11 @@ This is work for the awesome [`Servant`](https://hackage.haskell.org/package/ser
 
 Servant is a Haskell library used to define web services API and serving them.
 
-Warning: Servant internals are complicated! We will not dive into the details. We'll just learn how to use it.
-
 ---
 
 Let's start by importing the `servant` and `servant-server` libraries
 
 ```yaml
--- package.yaml
-
 dependencies:
   - servant
   - servant-server
@@ -232,161 +342,108 @@ module Api.Forms where
 
 ---
 
-And let's start defining a new data type
-
-```haskell
-data FormsApi = FormsApi
-  { createNewQuestionnaire :: _
-  , questionnaires         :: _
-  , addNewQuestion         :: _
-  , questionnaireQuestions :: _
-  , recordAnswerSet        :: _
-  , answerSets             :: _
-  , setIdAnswers           :: _
-  , questionAnswers        :: _
-  }
-```
-
-It's just a record with one field for every endpoint we want to have.
-
----
-
-Now it's time for a Servant technicality. To make the machinery work, the `FormsApi` data type needs a `mode` type variable which is then used on every route
+We can describe our entire API in a single data type
 
 ```haskell
 data FormsApi mode = FormsApi
-  { createNewQuestionnaire :: mode :- _
-  , questionnaires         :: mode :- _
-  , addNewQuestion         :: mode :- _
-  , questionnaireQuestions :: mode :- _
-  , recordAnswerSet        :: mode :- _
-  , answerSets             :: mode :- _
-  , setIdAnswers           :: mode :- _
-  , questionAnswers        :: mode :- _
+  { ...
   }
 ```
 
-It will be used to specify whether the API definition needs to be used for a server (that's our use case), a client, or something else.
-
----
-
-We need to import the `:-` operator from the `Servant` library and enable the `TypeOperators` extension to be able to use operators in a type definition.
-
+note:
 ```haskell
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
+import Domain.Answer
+import Domain.Id
+import Domain.Question
+import Domain.Questionnaire
+
 -- servant
+import Servant.API
 import Servant.API.Generic
 ```
 
 ---
 
-Next we can start defining the types of the actual endpoints.
-
+Every field describes a single endpoint
 
 ```haskell
-{-# LANGUAGE DataKinds #-}
-
-import Domain.Id
-import Domain.Questionnaire
-
--- servant
-import Servant.API
-
-data FormsApi mode = FormsApi
-  { createNewQuestionnaire :: mode :- "create-questionnaire"
-                           :> ReqBody '[JSON] Questionnaire
-                           :> Post '[JSON] (Id Questionnaire)
-  , ...
-  }
+  { createNewQuestionnaire
+      :: mode :- "create-questionnaire"
+      :> ReqBody '[JSON] Questionnaire
+      :> Post '[JSON] (Id Questionnaire)
 ```
 
 ---
 
-Let's try to unpack this definition:
-
-- `"create-questionnaire"` is the path
-- `ReqBody '[JSON] Questionnaire` is saying that the request should contain a `Questionnaire` formatted as `JSON`
-- `Post '[JSON] (Id Questionnaire)` is saying that it is a `Post` request which will return a `Id Questionnaire` formatted as `JSON`
-
----
-
-Now we want to define the endpoint to retrieve all questionnaires
-
 ```haskell
-data FormsApi mode = FormsApi
-  { ...
-  , questionnaires :: mode :- "questionnaires"
-                   :> Get '[JSON] [(Id Questionnaire, Questionnaire)]
-  , ...
-  }
+  , questionnaires
+      :: mode :- "questionnaires"
+      :> Get '[JSON] [(Id Questionnaire, Questionnaire)]
 ```
 
 ---
 
-Similarly to the previous endpoint we specify:
-
-- `"questionnaires"` as the path
-- the request does not contain any data, so we can omit it
-- `Get  '[JSON] [(Id Questionnaire, Questionnaire)]` is saying that it is a `Get` request which will return a list of pairs of `Questionnaire`s and their `Id`s
-
----
-
-Try to write yourself the endpoint to add a new question
-
----
-
 ```haskell
-import Domain.Question
-
-data FormsApi mode = FormsApi
-  { ...
-  , addNewQuestion :: mode :- "add-question"
-                   :> ReqBody '[JSON] Question
-                   :> Post '[JSON] (Id Question)
-  , ...
-  }
+  , addNewQuestion
+      :: mode :- "add-question"
+      :> ReqBody '[JSON] Question
+      :> Post '[JSON] (Id Question)
 ```
 
 ---
 
-Let's next write together the endpoint to retrieve all the questions for a specific questionnaire
-
 ```haskell
-data FormsApi mode = FormsApi
-  { ...
-  , questionnaireQuestions :: mode :- "questions"
-                           :> Capture "questionnaire" (Id Questionnaire)
-                           :> Get '[JSON] [(Id Question, Question)]
-  , ...
-  }
+  , questionnaireQuestions
+      :: mode :- "questions"
+      :> Capture "questionnaire" (Id Questionnaire)
+      :> Get '[JSON] [(Id Question, Question)]
 ```
 
 ---
 
-The new thing with respect to previous endpoints is the `Capture` keyword, which allows us to extract a value from a URL section.
-
-This means that the actual path will be `questions/{questionnaireId}`.
+```haskell
+  , recordAnswerSet
+      :: mode :- "record-answer-set"
+      :> ReqBody '[JSON] [AnswerData]
+      :> Post '[JSON] (Id AnswerSet)
+```
 
 ---
 
-You can try now to complete the definition of all the other routes
+```haskell
+  , answerSets
+      :: mode :- "answer-sets"
+      :> Capture "questionnaire" (Id Questionnaire)
+      :> Get  '[JSON] [Id AnswerSet]
+```
+
+---
 
 ```haskell
-import Domain.Answer
+  , setIdAnswers
+      :: mode :- "set-answers"
+      :> Capture "set" (Id AnswerSet)
+      :> Get  '[JSON] [(Id Answer, Answer)]
+```
 
-data FormsApi mode = FormsApi
-  { ...
-  , recordAnswerSet :: mode :- "record-answer-set" :> ReqBody '[JSON] [AnswerData]               :> Post '[JSON] (Id AnswerSet)
-  , answerSets      :: mode :- "answer-sets"       :> Capture "questionnaire" (Id Questionnaire) :> Get  '[JSON] [Id AnswerSet]
-  , setIdAnswers    :: mode :- "set-answers"       :> Capture "set" (Id AnswerSet)               :> Get  '[JSON] [(Id Answer, Answer)]
-  , questionAnswers :: mode :- "question-answers"  :> Capture "question" (Id Question)           :> Get  '[JSON] [(Id Answer, Answer)]
+---
+
+```haskell
+  , questionAnswers
+      :: mode :- "question-answers"
+      :> Capture "question" (Id Question)
+      :> Get  '[JSON] [(Id Answer, Answer)]
   }
 ```
 
 ---
 
 We realize that we're using many times the construct `(Id a, a)`.
+
+---
 
 It might make sense to define a data type to abstract that construct.
 
@@ -403,6 +460,8 @@ We can then use it in our API definition.
 ---
 
 Next, since we want to use `JSON` as our API language, we want to be able to encode to/decode from `JSON` all our domain entities.
+
+---
 
 To do this we will use the `aeson` library
 
@@ -447,14 +506,17 @@ data Value
 Let's try to decode a `Questionnaire`, first
 
 ```haskell
+instance FromJSON Questionnaire where
+  parseJSON :: Value -> Parser Questionnaire
+  parseJSON v = _
+```
+
+note:
+```haskell
 {-# LANGUAGE InstanceSigs #-}
 
 -- aeson
 import Data.Aeson.Types
-
-instance FromJSON Questionnaire where
-  parseJSON :: Value -> Parser Questionnaire
-  parseJSON v = _
 ```
 
 ---
@@ -464,12 +526,12 @@ The first step is case splitting on the input `Value`
 ```haskell
 instance FromJSON Questionnaire where
   parseJSON :: Value -> Parser Questionnaire
-  parseJSON (Object o) = _wa
-  parseJSON (Array a)  = _wb
-  parseJSON (String s) = _wc
-  parseJSON (Number n) = _wd
-  parseJSON (Bool b)   = _we
-  parseJSON Null       = _wf
+  parseJSON (Object o) = _
+  parseJSON (Array a)  = _
+  parseJSON (String s) = _
+  parseJSON (Number n) = _
+  parseJSON (Bool b)   = _
+  parseJSON Null       = _
 ```
 
 ---
@@ -482,12 +544,14 @@ I'd say it makes sense to use an object with a `title` field.
 
 Hence, all other options other than `Object` will need to fail.
 
+---
+
 The documentation of `FromJSON` describes the [`typeMismatch`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#v:typeMismatch) function exactly for this use case.
 
 ```haskell
 instance FromJSON Questionnaire where
   parseJSON :: Value -> Parser Questionnaire
-  parseJSON (Object o) = _wa
+  parseJSON (Object o) = _
   parseJSON v          = typeMismatch "Object" v
 ```
 
@@ -496,16 +560,23 @@ instance FromJSON Questionnaire where
 We can parse an object field with the [`.:`](https://hackage.haskell.org/package/aeson-2.1.0.0/docs/Data-Aeson-Types.html#v:.:) operator
 
 ```haskell
-{-# LANGUAGE OverloadedStrings #-}
-
   parseJSON (Object o) = _ (o .: "title" :: Parser Text)
 ```
 
 We specify the type explicitly to avoid excessive polymorphism until we are not done with the implementation.
 
+note:
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+```
+
 ---
 
-The hole now has type `Parser Text -> Parser Questionnaire`.
+The hole now has type
+
+```haskell
+Parser Text -> Parser Questionnaire
+```
 
 We can look at this as a map from `Text` to `Questionnaire` inside the `Parser` context.
 
@@ -545,6 +616,12 @@ It's worth mentioning that there is also an infix version of `fmap`, which is th
 
 ---
 
+`fmap`
+
+![functor](https://i.imgur.com/DKZ4ng9.png)
+
+---
+
 We're in luck since the `aeson` library provides a `Functor` instance for the `Parser` data type.
 
 ---
@@ -560,14 +637,17 @@ Now we can complete our definition for the `FromJSON Questionnaire` instance
 Next we would like to create an instance for `FromJSON Question`
 
 ```haskell
+instance FromJSON Question where
+  parseJSON :: Value -> Parser Question
+  parseJSON v = _
+```
+
+note:
+```haskell
 {-# LANGUAGE InstanceSigs #-}
 
 -- aeson
 import Data.Aeson.Types
-
-instance FromJSON Question where
-  parseJSON :: Value -> Parser Question
-  parseJSON v = _
 ```
 
 ---
@@ -584,15 +664,18 @@ Also in this case we want an object, so we can consider only that case
 Similarly to what we did above, we want to parse first all the single fields and then combine them into the `Question` data type.
 
 ```haskell
-{-# LANGUAGE OverloadedStrings #-}
-
-import Domain.Id
-import Domain.Questionnaire
-
   parseJSON (Object o) = _
     (o .: "title" :: Parser Text)
     (o .: "answer-type" :: Parser AnswerType)
     (o .: "questionnaire-id" :: Parser (Id Questionnaire))
+```
+
+note:
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+
+import Domain.Id
+import Domain.Questionnaire
 ```
 
 ---
@@ -614,7 +697,7 @@ instance FromJSON AnswerType where
 This time we want the JSON representation to be just a string
 
 ```haskell
-  parseJSON (String s) = _wi
+  parseJSON (String s) = _
   parseJSON v          = typeMismatch "String" v
 ```
 
@@ -626,7 +709,7 @@ If the string equals `Number` or `Paragraph`, we return the appropriate value, o
   parseJSON (String s) = case s of
     "Paragraph" -> pure Paragraph
     "Number"    -> pure Number
-    _           -> fail "the only allowed values are Paragraph and Number"
+    _           -> fail "allowed values are Paragraph and Number"
 ```
 
 Similarly to what we did for `IO`, we need to use the `pure` function to lift a value into the `Parser` context.
@@ -636,14 +719,17 @@ Similarly to what we did for `IO`, we need to use the `pure` function to lift a 
 The instance for `Id Questionnaire` is actually even simpler, since we can use the already present instance for `UUID`
 
 ```haskell
+instance FromJSON (Id a) where
+  parseJSON :: Value -> Parser (Id a)
+  parseJSON v = Id <$> parseJSON v
+```
+
+note:
+```haskell
 {-# LANGUAGE InstanceSigs #-}
 
 -- aeson
 import Data.Aeson.Types
-
-instance FromJSON (Id a) where
-  parseJSON :: Value -> Parser (Id a)
-  parseJSON v = Id <$> parseJSON v
 ```
 
 ---
@@ -657,13 +743,39 @@ Let's go back to our `FromJSON Question` instance
     (o .: "questionnaire-id" :: Parser (Id Questionnaire))
 ```
 
-The hole has type `Parser Text -> Parser AnswerType -> Parser (Id Questionnaire) -> Parser Question`
+The hole has type
+```haskell
+   Parser Text
+-> Parser AnswerType
+-> Parser (Id Questionnaire)
+-> Parser Question
+```
 
 ---
 
-Similarly to what we did for `Questionnaire`, we can see this as a function `Text -> AnswerType -> Id Questionnaire -> Question` inside the `Parser` context.
+Similarly to what we did for `Questionnaire`, we can see this as a function 
 
-We actually already have a `Text -> AnswerType -> Id Questionnaire -> Question` function, which is the `Question` constructor.
+```haskell
+   Text
+-> AnswerType
+-> Id Questionnaire
+-> Question
+```
+
+inside the `Parser` context.
+
+---
+
+We actually already have a 
+
+```haskell
+   Text
+-> AnswerType
+-> Id Questionnaire
+-> Question
+```
+
+function, which is the `Question` constructor.
 
 What we would like to do is to lift it to the `Parser` context.
 
@@ -699,6 +811,18 @@ Aha, here is where the `pure` lifting operation we were using comes from!
 
 ---
 
+`pure`
+
+![](https://i.imgur.com/Qdh6E8t.png)
+
+---
+
+`<*>`
+
+![applicative apply](https://i.imgur.com/xNJdUP4.png)
+
+---
+
 We are now interested in understanding how the `<*>` operator could be helpful.
 
 It works like function application, but in a given context `f`
@@ -713,6 +837,8 @@ It works like function application, but in a given context `f`
 ---
 
 Notice that is consumes a function type `f (a -> b)` and returns a simpler type `f b`.
+
+---
 
 We can actually use it to simplify the `f <$> fa :: f (b -> c -> d)` we had above
 
@@ -734,7 +860,16 @@ f <$> fa <*> fb <*> fc :: f d
 
 To sum up, we can use `<$>` and `<*>` to lift a function of any arity into any `Applicative` context.
 
-Exercise: try to write a `lift3 :: (a -> b -> c -> d) -> f a -> f b -> f c -> f d` function in terms of `<$>` and `<*>`.
+---
+
+Exercise: try to write a
+
+```haskell
+lift3 :: ( a ->   b ->   c ->   d)
+      -> f a -> f b -> f c -> f d
+```
+
+function in terms of `<$>` and `<*>`.
 
 ---
 
@@ -756,12 +891,6 @@ After all this hard work, a bad news: Haskell could generate all these instances
 We can use [`Generic` programming](https://www.youtube.com/watch?v=pwnrfREbhWY) to derive `FromJSON` instances.
 
 ```haskell
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-
--- base
-import GHC.Generics
-
 newtype Questionnaire = Questionnaire
   { title :: Text
   }
@@ -769,6 +898,15 @@ newtype Questionnaire = Questionnaire
 ```
 
 and similarly for other data types.
+
+note:
+```haskell
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
+-- base
+import GHC.Generics
+```
 
 ---
 
@@ -790,9 +928,6 @@ Now we're left with implementing a server which exposes the endpoints we defined
 We need to implement a server for our API data type
 
 ```haskell
--- servant-server
-import Servant.Server.Generic
-
 formsServer :: FormsApi AsServer
 formsServer = FormsApi
   { createNewQuestionnaire = _
@@ -806,9 +941,17 @@ formsServer = FormsApi
   }
 ```
 
+note:
+```haskell
+-- servant-server
+import Servant.Server.Generic
+```
+
 ---
 
 We will use the [Repository pattern](https://www.martinfowler.com/eaaCatalog/repository.html), to mediate between the domain and the persistence layers using collection-like interfaces for accessing and manipulating domain values.
+
+---
 
 It will be our interface to access and interact with the domain. It also allows defining multiple implementations (e.g. one for production and one for testing)
 
@@ -835,7 +978,9 @@ The first two endpoints are dealing with `Questionnaire`.
 They have type
 
 ```haskell
-createNewQuestionnaire :: Questionnaire -> Handler (Id Questionnaire)
+createNewQuestionnaire
+  :: Questionnaire
+  -> Handler (Id Questionnaire)
 
 questionnaires :: Handler [Identified Questionnaire]
 ```
@@ -862,13 +1007,16 @@ To remain detached from implementation details and allow for multiple implementa
 Therefore, we add the context as a type variable to our repository
 
 ```haskell
-import Domain.Id
-import Domain.Questionnaire
-
 data QuestionnaireRepository m = QuestionnaireRepository
   { add :: Questionnaire -> m (Id Questionnaire)
   , all :: m [Identified Questionnaire]
   }
+```
+
+note:
+```haskell
+import Domain.Id
+import Domain.Questionnaire
 ```
 
 ---
@@ -880,17 +1028,21 @@ This is an abstraction which is quite unique to statically typed functional prog
 At this point it is easy to implement the two first endpoints
 
 ```haskell
+formsServer :: QuestionnaireRepository Handler -> FormsApi AsServer
+formsServer questionnaireRepository = FormsApi
+  { createNewQuestionnaire = add questionnaireRepository
+  , questionnaires         = all questionnaireRepository
+  , ...
+  }
+```
+
+note:
+```haskell
 import Domain.QuestionnaireRepository
 
 -- servant-server
 import Servant.Server
-
-formsServer :: QuestionnaireRepository Handler -> FormsApi AsServer
-formsServer (QuestionnaireRepository addQuestionnaire allQuestionnaires) = FormsApi
-  { createNewQuestionnaire = addQuestionnaire
-  , questionnaires         = allQuestionnaires
-  , ...
-  }
+```
 
 ---
 
@@ -899,14 +1051,19 @@ Similarly, we can create the other repositories for the other entities, followin
 ```haskell
 module Domain.QuestionRepository where
 
+data QuestionRepository m = QuestionRepository
+  { add                 :: Question
+                        -> m (Id Question)
+  , allForQuestionnaire :: Id Questionnaire
+                        -> m [Identified Question]
+  }
+```
+
+note:
+```haskell
 import Domain.Id
 import Domain.Question
 import Domain.Questionnaire
-
-data QuestionRepository m = QuestionRepository
-  { add                 :: Question         -> m (Id Question)
-  , allForQuestionnaire :: Id Questionnaire -> m [Identified Question]
-  }
 ```
 
 ---
@@ -914,14 +1071,17 @@ data QuestionRepository m = QuestionRepository
 ```haskell
 module Domain.AnswerSetRepository where
 
-import Domain.Answer
-import Domain.Id
-import Domain.Questionnaire
-
 data AnswerSetRepository m = AnswerSetRepository
   { record              :: [AnswerData]     -> m (Id AnswerSet)
   , allForQuestionnaire :: Id Questionnaire -> m [Id AnswerSet]
   }
+```
+
+note:
+```haskell
+import Domain.Answer
+import Domain.Id
+import Domain.Questionnaire
 ```
 
 ---
@@ -929,20 +1089,43 @@ data AnswerSetRepository m = AnswerSetRepository
 ```haskell
 module Domain.AnswerRepository where
 
-import Domain.Answer
-import Domain.Id
-import Domain.Question
-
 data AnswerRepository m = AnswerRepository
   { allForSet      :: Id AnswerSet -> m [Identified Answer]
   , allForQuestion :: Id Question  -> m [Identified Answer]
   }
 ```
 
+note:
+```haskell
+import Domain.Answer
+import Domain.Id
+import Domain.Question
+```
+
 ---
 
 And we can use them to implement our API
 
+```haskell
+formsServer
+  questionnaireRepository
+  questionRepository
+  answerSetRepository
+  answerRepository
+  = FormsApi
+    { createNewQuestionnaire
+        = Questionnaire.add questionnaireRepository
+    , questionnaires
+        = Questionnaire.all questionnaireRepository
+    , addNewQuestion
+        = Question.add questionRepository
+    , questionnaireQuestions
+        = Question.allForQuestionnaire questionRepository
+    , ...
+    }
+```
+
+note:
 ```haskell
 import Domain.AnswerRepository as Answer
 import Domain.AnswerSetRepository as AnswerSet
@@ -955,16 +1138,6 @@ formsServer
   -> AnswerSetRepository Handler
   -> AnswerRepository Handler
   -> FormsApi AsServer
-formsServer questionnaireRepository questionRepository answerSetRepository answerRepository = FormsApi
-  { createNewQuestionnaire = Questionnaire.add             questionnaireRepository
-  , questionnaires         = Questionnaire.all             questionnaireRepository
-  , addNewQuestion         = Question.add                  questionRepository
-  , questionnaireQuestions = Question.allForQuestionnaire  questionRepository
-  , recordAnswerSet        = AnswerSet.record              answerSetRepository
-  , answerSets             = AnswerSet.allForQuestionnaire answerSetRepository
-  , setIdAnswers           = Answer.allForSet              answerRepository
-  , questionAnswers        = Answer.allForQuestion         answerRepository
-  }
 ```
 
 ---
@@ -974,14 +1147,6 @@ If we want, we could group all our dependencies into a single type
 ```haskell
 module Api.AppServices where
 
-import Domain.AnswerRepository
-import Domain.AnswerSetRepository
-import Domain.QuestionnaireRepository
-import Domain.QuestionRepository
-
--- servant-server
-import Servant
-
 data AppServices = AppServices
   { questionnaireRepository :: QuestionnaireRepository Handler
   , questionRepository      :: QuestionRepository Handler
@@ -990,27 +1155,49 @@ data AppServices = AppServices
   }
 ```
 
+note:
+```haskell
+import Domain.AnswerRepository
+import Domain.AnswerSetRepository
+import Domain.QuestionnaireRepository
+import Domain.QuestionRepository
+
+-- servant-server
+import Servant
+```
+
 ---
 
 And use it to simplify our server definition a bit
 
 ```haskell
-import Api.AppServices
-
-formsServer
-  :: AppServices
-  -> FormsApi AsServer
-formsServer (AppServices questionnaireRepository questionRepository answerSetRepository answerRepository) = FormsApi
-  { createNewQuestionnaire = Questionnaire.add             questionnaireRepository
-  , questionnaires         = Questionnaire.all             questionnaireRepository
-  , addNewQuestion         = Question.add                  questionRepository
-  , questionnaireQuestions = Question.allForQuestionnaire  questionRepository
-  , recordAnswerSet        = AnswerSet.record              answerSetRepository
-  , answerSets             = AnswerSet.allForQuestionnaire answerSetRepository
-  , setIdAnswers           = Answer.allForSet              answerRepository
-  , questionAnswers        = Answer.allForQuestion         answerRepository
-  }
+formsServer :: AppServices -> FormsApi AsServer
+formsServer (AppServices
+  questionnaireRepository
+  questionRepository
+  answerSetRepository
+  answerRepository)
+  = FormsApi
+    { createNewQuestionnaire
+        = Questionnaire.add questionnaireRepository
+    , questionnaires
+        = Questionnaire.all questionnaireRepository
+    , addNewQuestion
+        = Question.add questionRepository
+    , questionnaireQuestions
+        = Question.allForQuestionnaire questionRepository
+    , ...
+    }
 ```
+
+note:
+```haskell
+import Api.AppServices
+```
+
+---
+
+## Appendix - Generatic OpenAPI documentation
 
 ---
 
@@ -1038,6 +1225,14 @@ Add some little code to `openapi/Main.hs`
 ```haskell
 module Main where
 
+main :: IO ()
+main = do
+  BL8.putStrLn . encodePretty $
+    toOpenApi (Proxy :: Proxy (NamedRoutes FormsApi))
+```
+
+note:
+```haskell
 import Api.Forms
 
 -- aeson-pretty
@@ -1054,10 +1249,6 @@ import Servant.API
 
 -- servant-openapi3
 import Servant.OpenApi
-
-main :: IO ()
-main = do
-  BL8.putStrLn . encodePretty $ toOpenApi (Proxy :: Proxy (NamedRoutes FormsApi))
 ```
 
 ---
@@ -1065,15 +1256,18 @@ main = do
 Deriving a `Generic` instance for our API definition
 
 ```haskell
-{-# LANGUAGE DeriveGeneric #-}
-
--- base
-import GHC.Generics
-
 data FormsApi mode = FormsApi
   { ...
   }
   deriving Generic
+```
+
+note:
+```
+{-# LANGUAGE DeriveGeneric #-}
+
+-- base
+import GHC.Generics
 ```
 
 ---
@@ -1090,6 +1284,14 @@ dependencies:
 And deriving `ToSchema` instances for our data types.
 
 ```haskell
+newtype Questionnaire = Questionnaire
+  { title :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+```
+
+note:
+```haskell
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 
@@ -1098,11 +1300,6 @@ import GHC.Generics
 
 -- openapi3
 import Data.OpenApi
-
-newtype Questionnaire = Questionnaire
-  { title :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
 ```
 
 ---
