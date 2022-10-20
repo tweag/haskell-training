@@ -1,3 +1,5 @@
+![Tweag logo](./images/tweag.png)
+
 # haskell-training
 
 Material for a Haskell training course
