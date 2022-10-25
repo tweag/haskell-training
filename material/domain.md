@@ -31,7 +31,7 @@ module Forms where
 
 ---
 
-We define a `Question` by its title, some text containing the actual question, and the type required for the answer
+We define a `Question` by its title, which is some text containing the actual question, and the type required for the answer
 
 ---
 
@@ -169,7 +169,7 @@ What are the benefits of purity?
 
 ---
 
-What is ruled out by purity? The following can not be represented by pure functions:
+What is ruled out by purity? The following cannot be represented by pure functions:
 
 - Mutable variables
 - Exceptions
@@ -216,7 +216,7 @@ getLine :: IO String
 
 ---
 
-Code in the `IO` context is by nature impure. As a result, the order in which operations are executed matters, just like in imperative languages.
+Code in the `IO` context is impure by nature. As a result, the order in which operations are executed matters, just like in imperative languages.
 
 ---
 

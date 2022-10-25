@@ -18,3 +18,10 @@ ghc-options:
 
 library:
   source-dirs:      src
+
+executables:
+  forms:
+    source-dirs:    forms
+    main:           Main.hs
+    dependencies:
+      - haskell-training
