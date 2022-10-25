@@ -4,6 +4,5 @@ import Forms
 
 main :: IO ()
 main = do
-  name <- ask whatIsYourName
-  age  <- ask howOldAreYou
-  putStrLn ("name: " <> show name <> "; age: " <> show age)
+  answers <- askMultiple [whatIsYourName, howOldAreYou]
+  print answers

@@ -1,10 +1,16 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Forms where
 
 -- base
 import Text.Read (readEither)
 
+-- text
+import Data.Text (Text, pack, unpack)
+import qualified Data.Text.IO as Text
+
 data Question = MkQuestion
-  { title      :: String
+  { title      :: Text
   , answerType :: AnswerType
   }
 
@@ -25,25 +31,32 @@ howOldAreYou = MkQuestion
   }
 
 data Answer
-  = ParagraphAnswer String
+  = ParagraphAnswer Text
   | NumberAnswer Int
   deriving Show
 
 ask :: Question -> IO Answer
 ask question = do
-  putStrLn (title question)
-  answer <- getLine
+  Text.putStrLn (title question)
+  answer <- Text.getLine
   case answerType question of
     Paragraph -> pure (ParagraphAnswer answer)
     Number    ->
       case parseInt answer of
         Left errorMessage -> do
-          putStrLn (  "invalid integer: "
+          Text.putStrLn (  "invalid integer: "
                    <> errorMessage
                    <> ". Try again"
                    )
           ask question
         Right intAnswer   -> pure (NumberAnswer intAnswer)
 
-parseInt :: String -> Either String Int
-parseInt = readEither
+parseInt :: Text -> Either Text Int
+parseInt = packLeft . readEither . unpack
+  where
+    packLeft :: Either String Int -> Either Text Int
+    packLeft (Left  s) = Left (pack s)
+    packLeft (Right i) = Right i
+
+askMultiple :: [Question] -> IO [Answer]
+askMultiple = traverse ask
