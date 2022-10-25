@@ -154,7 +154,7 @@ You can assign names to expressions and refer to those names in other expression
 
 The expression `x` is completely equivalent to the expression `"hello"`.
 
-They could be substituted interchangeably.
+They could be used interchangeably.
 
 ---
 
@@ -230,6 +230,8 @@ Pay attention that Haskell is an [indentation](https://en.m.wikibooks.org/wiki/H
 We can now check what these things are in GHCi
 
 ```
+> :l Basics
+
 > :i Person
 type Person :: *
 data Person = MkPerson {name :: String, age :: Int}
