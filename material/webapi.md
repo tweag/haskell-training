@@ -883,7 +883,8 @@ To sum up, we can use `<$>` and `<*>` to lift a function of any arity into any `
 Exercise: try to write a
 
 ```haskell
-lift3 :: ( a ->   b ->   c ->   d)
+lift3 :: Applicative f
+      => ( a ->   b ->   c ->   d)
       -> f a -> f b -> f c -> f d
 ```
 
