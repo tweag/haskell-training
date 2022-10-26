@@ -7,10 +7,21 @@ import Domain.Answer
 import Domain.Id
 import Domain.Question
 import Domain.Questionnaire
+import Domain.AnswerRepository as Answer
+import Domain.QuestionRepository as Question
+import Domain.QuestionnaireRepository as Questionnaire
+import Domain.SubmissionRepository as Submission
+
+-- base
+import Prelude hiding (all)
 
 -- servant
 import Servant.API
 import Servant.API.Generic
+
+-- servant-server
+import Servant.Server
+import Servant.Server.Generic
 
 data FormsApi mode = FormsApi
   { createNewQuestionnaire
@@ -45,3 +56,33 @@ data FormsApi mode = FormsApi
       :> Capture "question" (Id Question)
       :> Get  '[JSON] [Identified Answer]
   }
+
+formsServer
+  :: QuestionnaireRepository Handler
+  -> QuestionRepository Handler
+  -> SubmissionRepository Handler
+  -> AnswerRepository Handler
+  -> FormsApi AsServer
+formsServer
+  questionnaireRepository
+  questionRepository
+  submissionRepository
+  answerRepository
+  = FormsApi
+    { createNewQuestionnaire
+        = Questionnaire.add questionnaireRepository
+    , questionnaires
+        = Questionnaire.all questionnaireRepository
+    , addNewQuestion
+        = Question.add questionRepository
+    , questionnaireQuestions
+        = Question.allForQuestionnaire questionRepository
+    , recordSubmission
+        = Submission.record submissionRepository
+    , submissions
+        = Submission.allForQuestionnaire submissionRepository
+    , submissionAnswers
+        = Answer.allForSubmission answerRepository
+    , questionAnswers
+        = Answer.allForQuestion answerRepository
+    }
