@@ -12,6 +12,9 @@ import Data.Aeson.Types
 -- base
 import GHC.Generics
 
+-- openapi3
+import Data.OpenApi
+
 -- text
 import Data.Text
 
@@ -20,9 +23,9 @@ data Question = Question
   , answerType      :: AnswerType
   , questionnaireId :: Id Questionnaire
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data AnswerType
   = Paragraph
   | Number
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)

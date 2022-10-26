@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Api.Forms where
 
+import Api.AppServices
 import Domain.Answer
 import Domain.Id
 import Domain.Question
@@ -13,6 +15,7 @@ import Domain.QuestionnaireRepository as Questionnaire
 import Domain.SubmissionRepository as Submission
 
 -- base
+import GHC.Generics
 import Prelude hiding (all)
 
 -- servant
@@ -20,7 +23,6 @@ import Servant.API
 import Servant.API.Generic
 
 -- servant-server
-import Servant.Server
 import Servant.Server.Generic
 
 data FormsApi mode = FormsApi
@@ -56,18 +58,14 @@ data FormsApi mode = FormsApi
       :> Capture "question" (Id Question)
       :> Get  '[JSON] [Identified Answer]
   }
+  deriving Generic
 
-formsServer
-  :: QuestionnaireRepository Handler
-  -> QuestionRepository Handler
-  -> SubmissionRepository Handler
-  -> AnswerRepository Handler
-  -> FormsApi AsServer
-formsServer
+formsServer :: AppServices -> FormsApi AsServer
+formsServer (AppServices
   questionnaireRepository
   questionRepository
   submissionRepository
-  answerRepository
+  answerRepository)
   = FormsApi
     { createNewQuestionnaire
         = Questionnaire.add questionnaireRepository

@@ -11,6 +11,7 @@ extra-source-files:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
+  - openapi3
   - servant
   - servant-server
   - text
@@ -30,3 +31,12 @@ executables:
     main:           Main.hs
     dependencies:
       - haskell-training
+
+  openapi:
+    source-dirs:    openapi
+    main:           Main.hs
+    dependencies:
+      - haskell-training
+      - aeson-pretty
+      - bytestring
+      - servant-openapi3
