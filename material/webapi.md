@@ -17,6 +17,12 @@ slideOptions:
 
 ---
 
+```bash
+git checkout chapter2
+```
+
+---
+
 In this second chapter we want to transform our terminal application into a more structured web API.
 
 ---
@@ -185,7 +191,7 @@ newtype QuestionnaireId = QuestionnaireId UUID
 ```
 
 note:
-```
+```haskell
 -- uuid
 import Data.UUID
 ```
@@ -266,7 +272,7 @@ newtype AnswerSetId = AnsewrSetId UUID
 
 note:
 ```
---uuid
+-- uuid
 import Data.UUID
 ```
 
@@ -288,7 +294,7 @@ newtype Id a = Id UUID
 
 note:
 ```
---uuid
+-- uuid
 import Data.UUID
 ```
 
@@ -308,6 +314,12 @@ Since we are using it only as type level tag, it doesn't need to have any real c
 
 ```haskell
 data AnswerSet
+```
+
+---
+
+```bash
+git checkout chapter2.1
 ```
 
 ---
@@ -456,6 +468,12 @@ data Identified a = Identified
 ```
 
 We can then use it in our API definition.
+
+---
+
+```bash
+git checkout chapter2.2
+```
 
 ---
 
@@ -921,6 +939,12 @@ newtype Questionnaire = Questionnaire
 
 ---
 
+```bash
+git checkout chapter2.3
+```
+
+---
+
 Now we're left with implementing a server which exposes the endpoints we defined above.
 
 ---
@@ -1142,6 +1166,12 @@ formsServer
 
 ---
 
+```bash
+git checkout chapter2.4
+```
+
+---
+
 If we want, we could group all our dependencies into a single type
 
 ```haskell
@@ -1197,7 +1227,13 @@ import Api.AppServices
 
 ---
 
-## Appendix - Generatic OpenAPI documentation
+## Appendix - Generate OpenAPI documentation
+
+---
+
+```bash
+git checkout chapter2.5
+```
 
 ---
 
