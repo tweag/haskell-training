@@ -10,6 +10,8 @@ extra-source-files:
 
 dependencies:
   - base >= 4.7 && < 5
+  - servant
+  - servant-server
   - text
   - uuid
 
