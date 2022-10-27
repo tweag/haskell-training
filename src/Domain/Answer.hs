@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Domain.Answer where
 
@@ -14,6 +15,9 @@ import GHC.Generics
 
 -- openapi3
 import Data.OpenApi
+
+-- rel8
+import Rel8
 
 -- text
 import Data.Text
@@ -36,4 +40,6 @@ data AnswerData = AnswerData
 data Content
   = Paragraph Text
   | Number Int
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving stock (Generic, Read, Show)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving DBType via ReadShow Content

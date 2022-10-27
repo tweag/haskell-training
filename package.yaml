@@ -12,6 +12,7 @@ dependencies:
   - aeson
   - base >= 4.7 && < 5
   - openapi3
+  - rel8
   - servant
   - servant-server
   - text

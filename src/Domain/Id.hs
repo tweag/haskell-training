@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Domain.Id where
 
@@ -12,11 +14,14 @@ import GHC.Generics
 -- openapi3
 import Data.OpenApi
 
+-- rel8
+import Rel8
+
 -- uuid
 import Data.UUID
 
 newtype Id a = Id UUID
-  deriving (Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, DBType)
 
 data Identified a = Identified
   { id     :: Id a
