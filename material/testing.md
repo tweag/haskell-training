@@ -404,15 +404,15 @@ spec =
         questionnaireId <- createNewQuestionnaire forms $ Questionnaire "title"
         questionId1 <- addNewQuestion forms $ Question "question1" Question.Paragraph questionnaireId
         _           <- addNewQuestion forms $ Question "question2" Question.Number    questionnaireId
-        answerSetId <- recordAnswerSet forms
+        submissionId <- recordSubmission forms
           [ AnswerData (Answer.Paragraph "paragraph answer") questionId1
           ]
-        answerSetId `shouldSatisfy` isLeft
+        submissionId `shouldSatisfy` isLeft
 ```
 
 ---
 
-This does not work because `createNewQuestionnaire`, `addNewQuestion` and `recordAnswerSet` all return results in the `Handler` context, while `shouldSatify` lives in `IO`.
+This does not work because `createNewQuestionnaire`, `addNewQuestion` and `recordSubmission` all return results in the `Handler` context, while `shouldSatify` lives in `IO`.
 
 ---
 
@@ -425,14 +425,14 @@ We could use [`runHandler`](https://hackage.haskell.org/package/servant-server-0
 import Servant
 
       it "fails if we do not register an answer for every question of the questionnaire" $ do
-        answerSetId <- runHandler $ do
+        submissionId <- runHandler $ do
           questionnaireId <- createNewQuestionnaire forms $ Questionnaire "title"
           questionId1 <- addNewQuestion forms $ Question "question1" Question.Paragraph questionnaireId
           _           <- addNewQuestion forms $ Question "question2" Question.Number    questionnaireId
-          recordAnswerSet forms
+          recordSubmission forms
             [ AnswerData (Answer.Paragraph "paragraph answer") questionId1
             ]
-        answerSetId `shouldSatisfy` isLeft
+        submissionId `shouldSatisfy` isLeft
 ```
 
 ---
@@ -466,7 +466,7 @@ Using the only available constructor
 statefulAppServices = AppServices
   { questionnaireRepository = _
   , questionRepository      = _
-  , answerSetRepository     = _
+  , submissionRepository    = _
   , answerRepository        = _
   }
 ```
@@ -740,7 +740,7 @@ Now that we have all the repositories, we can implement
 statefulAppServices = AppServices
   { questionnaireRepository = _
   , questionRepository      = _
-  , answerSetRepository     = _
+  , submissionRepository    = _
   , answerRepository        = _
   }
 ```
@@ -759,11 +759,11 @@ In this case, it's enough to use `liftIO`.
 import Api.AppServices
 import Api.InMemoryState
 import Api.StatefulAnswerRepository
-import Api.StatefulAnswerSetRepository
+import Api.StatefulSubmissionRepository
 import Api.StatefulQuestionRepository
 import Api.StatefulQuestionnaireRepository
 import Domain.AnswerRepository as Answer
-import Domain.AnswerSetRepository as AnswerSet
+import Domain.SubmissionRepository as Submission
 import Domain.QuestionnaireRepository as Questionnaire
 import Domain.QuestionRepository as Question
 
@@ -777,7 +777,7 @@ statefulAppServices :: TVar InMemoryState -> AppServices
 statefulAppServices memory = AppServices
   { questionnaireRepository = Questionnaire.hoist liftIO $ statefulQuestionnaireRepository memory
   , questionRepository      = Question.hoist      liftIO $ statefulQuestionRepository memory
-  , answerSetRepository     = AnswerSet.hoist     liftIO $ statefulAnswerSetRepository memory
+  , submissionRepository    = Submission.hoist     liftIO $ statefulSubmissionRepository memory
   , answerRepository        = Answer.hoist        liftIO $ statefulAnswerRepository memory
   }
 ```

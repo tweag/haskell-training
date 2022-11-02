@@ -48,10 +48,10 @@ erDiagram
     answer_type      AnswerType
   }
   ANSWER {
-    id          Id Answer
-    question_id Id Question
-    set_id      Id AnswerSet
-    content     Content
+    id            Id Answer
+    question_id   Id Question
+    submission_id Id Submission
+    content       Content
   }
 ```
 
@@ -726,7 +726,7 @@ postgresAllQuestionnaires connection = do
 
 ---
 
-Similarly, we can implement all the other repositories `PostgresQuestionRepository`, `PostgresAnswerSetRepository` and `PostgresAnswerRepository`.
+Similarly, we can implement all the other repositories `PostgresQuestionRepository`, `PostgresSubmissionRepository` and `PostgresAnswerRepository`.
 
 ---
 
@@ -749,7 +749,7 @@ postgresAppServices :: AppServices
 postgresAppServices = AppServices
   { questionnaireRepository = _
   , questionRepository      = _
-  , answerSetRepository     = _
+  , submissionRepository    = _
   , answerRepository        = _
   }
 ```
@@ -871,18 +871,18 @@ We can now progress with the definition of `postgresAppServices`
 
 ```haskell
 import Domain.AnswerRepository as Answer
-import Domain.AnswerSetRepository as AnswerSet
+import Domain.SubmissionRepository as Submission
 import Domain.QuestionnaireRepository as Questionnaire
 import Domain.QuestionRepository as Question
 import Infrastructure.PostgresAnswerRepository
-import Infrastructure.PostgresAnswerSetRepository
+import Infrastructure.PostgresSubmissionRepository
 import Infrastructure.PostgresQuestionRepository
 import Infrastructure.PostgresQuestionnaireRepository
 
 postgresAppServices connection = AppServices
   { questionnaireRepository = Questionnaire.hoist _ $ postgresQuestionnaireRepository connection
   , questionRepository      = Question.hoist      _ $ postgresQuestionRepository connection
-  , answerSetRepository     = AnswerSet.hoist     _ $ postgresAnswerSetRepository connection
+  , submissionRepository    = Submission.hoist    _ $ postgresSubmissionRepository connection
   , answerRepository        = Answer.hoist        _ $ postgresAnswerRepository connection
   }
 ```
@@ -903,7 +903,7 @@ import Control.Monad.Trans.Except
 postgresAppServices connection = AppServices
   { questionnaireRepository = Questionnaire.hoist f $ postgresQuestionnaireRepository connection
   , questionRepository      = Question.hoist      f $ postgresQuestionRepository connection
-  , answerSetRepository     = AnswerSet.hoist     f $ postgresAnswerSetRepository connection
+  , submissionRepository    = Submission.hoist     f $ postgresSubmissionRepository connection
   , answerRepository        = Answer.hoist        f $ postgresAnswerRepository connection
   }
   where
@@ -1076,7 +1076,7 @@ curl --request GET \
 
 ```bash
 curl --request POST \
-  --url http://localhost:8080/record-answer-set \
+  --url http://localhost:8080/record-submission \
   --header 'Content-Type: application/json' \
   --data '[
 	{
@@ -1093,14 +1093,14 @@ curl --request POST \
 
 ```bash
 curl --request GET \
-  --url http://localhost:8080/answer-sets/d0243d02-13e1-46cc-98a2-25ec61bcb203
+  --url http://localhost:8080/submissions/d0243d02-13e1-46cc-98a2-25ec61bcb203
 ```
 
 ---
 
 ```bash
 curl --request GET \
-  --url http://localhost:8080/set-answers/33c9522f-527a-4f3d-9e65-3873e79a4229
+  --url http://localhost:8080/submissions/33c9522f-527a-4f3d-9e65-3873e79a4229
 ```
 
 ---

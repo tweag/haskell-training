@@ -58,7 +58,7 @@ Add new `question` to a `questionnaire`
 
 ---
 
-Retrieve `question`s for `questionnaire` 
+Retrieve `question`s for `questionnaire`
 
 |||
 | --- | --- |
@@ -69,35 +69,35 @@ Retrieve `question`s for `questionnaire`
 
 ---
 
-Record `set` of `answer`s for a `questionnaire`
+Record `submission` of `answer`s for a `questionnaire`
 
 |||
 | --- | --- |
 | **method** | `POST` |
 | **request** | list of `answer`s with `content` and `question` `id` |
-| **response** | `id` for the `set` of `answer`s |
+| **response** | `id` for the `submission` of `answer`s |
 |||
 
 ---
 
-Retrieve `set`s of `answer`s for a `questionnaire`
+Retrieve `submission`s of `answer`s for a `questionnaire`
 
 |||
 | --- | --- |
 | **method** | `GET` |
 | **request** | `questionnaire` `id` |
-| **response** | list of `answer` `set` `id`s |
+| **response** | list of `submission` `id`s |
 |||
 
 ---
 
-Retrieve all `answer`s for a given `set`
+Retrieve all `answer`s for a given `submission`
 
 |||
 | --- | --- |
 | **method** | `GET` |
-| **request** | `answer` `set` `id` |
-| **response** | list of `answer`s with their `id`s and `answer` `set` `id` |
+| **request** | `submission` `id` |
+| **response** | list of `answer`s with their `id`s and `submission` `id` |
 |||
 
 ---
@@ -109,7 +109,7 @@ Retrieve all `answer`s for a given `question`
 | --- | --- |
 | **method** | `GET` |
 | **request** | `question` `id` |
-| **response** | list of `answer`s with their `id`s and `answer` `set` `id` |
+| **response** | list of `answer`s with their `id`s and `submission` `id` |
 |||
 
 ---
@@ -215,15 +215,15 @@ The last relevant entity is `Answer`, which has two versions.
 
 ---
 
-One with the `Id AnswerSet`, when we are returning it.
+One with the `submissionId`, when we are returning it.
 
 ```haskell
 module Domain.Answer where
 
 data Answer = Answer
-  { content    :: Content
-  , questionId :: QuestionId
-  , setId      :: AnswerSetId
+  { content      :: Content
+  , questionId   :: QuestionId
+  , submissionId :: SubmissionId
   }
 ```
 
@@ -256,12 +256,12 @@ import Data.Text
 
 ---
 
-We can define `QuestionId` and `AnswerSetId` similarly to how we defined `QuestionnaireId`
+We can define `QuestionId` and `SubmissionId` similarly to how we defined `QuestionnaireId`
 
 ```haskell
 newtype QuestionId = QuestionId UUID
 
-newtype AnswerSetId = AnsewrSetId UUID
+newtype SubmissionId = SubmissionId UUID
 ```
 
 note:
@@ -288,26 +288,26 @@ newtype Id a = Id UUID
 
 note:
 ```
---uuid
+-- uuid
 import Data.UUID
 ```
 
 ---
 
-Now `Id Questionnaire`, `Id Question` and `Id AnswerSet` are all containing a `UUID`, while being distinct at the type level.
+Now `Id Questionnaire`, `Id Question` and `Id Submission` are all containing a `UUID`, while being distinct at the type level.
 
 ---
 
-We can now ditch `QuestionnaireId` and `QuestionId`.
+We can now ditch `QuestionnaireId`, `QuestionId` and `SubmissionId`.
 
 ---
 
-We are using `AnswerSet` to tag our `Id` type, but actually we never defined such a data type.
+We are using `Submission` to tag our `Id` type, but actually we never defined such a data type.
 
 Since we are using it only as type level tag, it doesn't need to have any real constructor.
 
 ```haskell
-data AnswerSet
+data Submission
 ```
 
 ---
@@ -405,27 +405,27 @@ Every field describes a single endpoint
 ---
 
 ```haskell
-  , recordAnswerSet
-      :: mode :- "record-answer-set"
+  , recordSubmission
+      :: mode :- "record-submission"
       :> ReqBody '[JSON] [AnswerData]
-      :> Post '[JSON] (Id AnswerSet)
+      :> Post '[JSON] (Id Submission)
 ```
 
 ---
 
 ```haskell
-  , answerSets
-      :: mode :- "answer-sets"
+  , submissions
+      :: mode :- "submissions"
       :> Capture "questionnaire" (Id Questionnaire)
-      :> Get  '[JSON] [Id AnswerSet]
+      :> Get  '[JSON] [Id Submission]
 ```
 
 ---
 
 ```haskell
-  , setIdAnswers
-      :: mode :- "set-answers"
-      :> Capture "set" (Id AnswerSet)
+  , submissionAnswers
+      :: mode :- "submission-answers"
+      :> Capture "submission" (Id Submission)
       :> Get  '[JSON] [(Id Answer, Answer)]
 ```
 
@@ -753,7 +753,7 @@ The hole has type
 
 ---
 
-Similarly to what we did for `Questionnaire`, we can see this as a function 
+Similarly to what we did for `Questionnaire`, we can see this as a function
 
 ```haskell
    Text
@@ -766,7 +766,7 @@ inside the `Parser` context.
 
 ---
 
-We actually already have a 
+We actually already have a
 
 ```haskell
    Text
@@ -934,9 +934,9 @@ formsServer = FormsApi
   , questionnaires         = _
   , addNewQuestion         = _
   , questionnaireQuestions = _
-  , recordAnswerSet        = _
-  , answerSets             = _
-  , setIdAnswers           = _
+  , recordSubmission       = _
+  , submissions            = _
+  , submissionAnswers      = _
   , questionAnswers        = _
   }
 ```
@@ -1069,11 +1069,11 @@ import Domain.Questionnaire
 ---
 
 ```haskell
-module Domain.AnswerSetRepository where
+module Domain.SubmissionRepository where
 
-data AnswerSetRepository m = AnswerSetRepository
-  { record              :: [AnswerData]     -> m (Id AnswerSet)
-  , allForQuestionnaire :: Id Questionnaire -> m [Id AnswerSet]
+data SubmissionRepository m = SubmissionRepository
+  { record              :: [AnswerData]     -> m (Id Submission)
+  , allForQuestionnaire :: Id Questionnaire -> m [Id Submission]
   }
 ```
 
@@ -1090,8 +1090,8 @@ import Domain.Questionnaire
 module Domain.AnswerRepository where
 
 data AnswerRepository m = AnswerRepository
-  { allForSet      :: Id AnswerSet -> m [Identified Answer]
-  , allForQuestion :: Id Question  -> m [Identified Answer]
+  { allForSubmission :: Id Submission -> m [Identified Answer]
+  , allForQuestion   :: Id Question   -> m [Identified Answer]
   }
 ```
 
@@ -1110,7 +1110,7 @@ And we can use them to implement our API
 formsServer
   questionnaireRepository
   questionRepository
-  answerSetRepository
+  submissionRepository
   answerRepository
   = FormsApi
     { createNewQuestionnaire
@@ -1128,14 +1128,14 @@ formsServer
 note:
 ```haskell
 import Domain.AnswerRepository as Answer
-import Domain.AnswerSetRepository as AnswerSet
+import Domain.SubmissionRepository as Submission
 import Domain.QuestionRepository as Question
 import Domain.QuestionnaireRepository as Questionnaire
 
 formsServer
   :: QuestionnaireRepository Handler
   -> QuestionRepository Handler
-  -> AnswerSetRepository Handler
+  -> SubmissionRepository Handler
   -> AnswerRepository Handler
   -> FormsApi AsServer
 ```
@@ -1150,7 +1150,7 @@ module Api.AppServices where
 data AppServices = AppServices
   { questionnaireRepository :: QuestionnaireRepository Handler
   , questionRepository      :: QuestionRepository Handler
-  , answerSetRepository     :: AnswerSetRepository Handler
+  , submissionRepository    :: SubmissionRepository Handler
   , answerRepository        :: AnswerRepository Handler
   }
 ```
@@ -1158,7 +1158,7 @@ data AppServices = AppServices
 note:
 ```haskell
 import Domain.AnswerRepository
-import Domain.AnswerSetRepository
+import Domain.SubmissionRepository
 import Domain.QuestionnaireRepository
 import Domain.QuestionRepository
 
@@ -1175,7 +1175,7 @@ formsServer :: AppServices -> FormsApi AsServer
 formsServer (AppServices
   questionnaireRepository
   questionRepository
-  answerSetRepository
+  submissionRepository
   answerRepository)
   = FormsApi
     { createNewQuestionnaire

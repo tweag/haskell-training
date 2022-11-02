@@ -13,6 +13,6 @@ CREATE TABLE question
 CREATE TABLE answer
 ( id UUID PRIMARY KEY
 , question_id UUID REFERENCES question (id) ON DELETE CASCADE ON UPDATE CASCADE
-, set_id UUID NOT NULL
+, submission_id UUID NOT NULL
 , content TEXT
 );
