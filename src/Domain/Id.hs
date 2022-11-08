@@ -21,7 +21,7 @@ import Rel8
 import Data.UUID
 
 newtype Id a = Id UUID
-  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, DBType)
+  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, DBType, DBEq)
 
 data Identified a = Identified
   { id     :: Id a
