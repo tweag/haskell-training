@@ -43,3 +43,6 @@ data Content
   deriving stock (Generic, Read, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
   deriving DBType via ReadShow Content
+
+answerDataIdIsAnswerId :: Id AnswerData -> Id Answer
+answerDataIdIsAnswerId (Id uuid) = Id uuid
