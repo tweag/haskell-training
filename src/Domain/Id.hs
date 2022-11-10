@@ -19,6 +19,7 @@ import Rel8
 
 -- uuid
 import Data.UUID
+import Data.UUID.V4
 
 newtype Id a = Id UUID
   deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, DBType, DBEq)
@@ -30,3 +31,6 @@ data Identified a = Identified
   deriving (Generic, FromJSON, ToJSON)
 
 instance ToSchema a => ToSchema (Identified a)
+
+generate :: IO (Id a)
+generate = Id <$> nextRandom

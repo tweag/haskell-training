@@ -11,11 +11,13 @@ extra-source-files:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
+  - hasql
   - openapi3
   - rel8
   - servant
   - servant-server
   - text
+  - transformers
   - uuid
 
 ghc-options:
