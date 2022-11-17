@@ -639,6 +639,7 @@ Actually, Haskell already has a function which does exactly this!
 ```haskell
 askMultiple :: [Question] -> IO [Answer]
 askMultiple = traverse ask
+```
 
 ---
 
