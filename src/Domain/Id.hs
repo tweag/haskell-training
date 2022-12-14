@@ -17,12 +17,15 @@ import Data.OpenApi
 -- rel8
 import Rel8
 
+-- servant
+import Servant.API
+
 -- uuid
 import Data.UUID
 import Data.UUID.V4
 
 newtype Id a = Id UUID
-  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, DBType, DBEq)
+  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, DBType, DBEq, FromHttpApiData)
 
 data Identified a = Identified
   { id     :: Id a

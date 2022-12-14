@@ -47,4 +47,6 @@ postgresAllSubmissionsForQuestionnaire
   -> Id Domain.Questionnaire
   -> ExceptT QueryError IO [Id Domain.Submission]
 postgresAllSubmissionsForQuestionnaire connection questionnaireId =
-  ExceptT $ run (statement () . select $ DB.questionnaireSubmissions questionnaireId) connection
+  ExceptT $ run
+    (statement () . select $ DB.questionnaireSubmissions questionnaireId)
+    connection
