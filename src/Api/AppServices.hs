@@ -14,3 +14,11 @@ data AppServices = AppServices
   , submissionRepository    :: SubmissionRepository Handler
   , answerRepository        :: AnswerRepository Handler
   }
+
+postgresAppServices :: AppServices
+postgresAppServices = AppServices
+  { questionnaireRepository = _
+  , questionRepository      = _
+  , submissionRepository    = _
+  , answerRepository        = _
+  }
