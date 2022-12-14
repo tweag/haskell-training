@@ -1,7 +1,18 @@
 ---
 type: slide
 tags: tweag, training
+slideOptions:
+  progress: true
+  controls: false
+  slideNumber: false
 ---
+
+<style>
+  .reveal pre {width: 100%; max-height: 600px;}
+  .reveal pre code {max-height: 600px;}
+  code {color: #c7254e;}
+  .mermaid svg {display: flex; justify-content: center; margin: auto;}
+</style>
 
 # Haskell at Work - Persistence
 
@@ -13,13 +24,15 @@ The next step we want to tackle is persisting our data.
 
 In the Haskell ecosystem there are several libraries one could choose to interact with the database.
 
-They differ a lot in the degree of abstraction they add on top of the database.
+They differ a lot in the level of abstraction they add on top of the database.
+
+---
 
 The simplest are [postgresql-simple](https://hackage.haskell.org/package/postgresql-simple) and [mysql-simple](https://hackage.haskell.org/package/mysql-simple)
 
 ---
 
-We are going to use [rel8](https://hackage.haskell.org/package/rel8), a library which helps us to abstract away from the database and have a very Haskell-oriented approach
+We are going to use [rel8](https://hackage.haskell.org/package/rel8), a library which helps us to abstract away from the database and has a very Haskell-oriented approach
 
 ```yaml
 -- package.yaml
@@ -38,20 +51,20 @@ erDiagram
   QUESTIONNAIRE ||--o{ QUESTION : contains
   QUESTION ||--o{ ANSWER : "is answered by"
   QUESTIONNAIRE {
-    id    Id Questionnaire
+    id    Id_Questionnaire
     title Text
   }
   QUESTION {
-    id               Id Question
-    questionnaire_id Id Questionnaire
+    id               Id_Question
+    questionnaire_id Id_Questionnaire
     title            Text
     answer_type      AnswerType
   }
   ANSWER {
-    id          Id Answer
-    question_id Id Question
-    set_id      Id AnswerSet
-    content     Content
+    id            Id_Answer
+    question_id   Id_Question
+    submission_id Id_Submission
+    content       Content
   }
 ```
 
@@ -69,63 +82,13 @@ docker-compose run
 
 ---
 
-Let's start working on a new file, say `Infrastructure/Persistence.hs`
+In `Infrastructure/Persistence.hs` we already have the necessary code to describe our database schema using Haskell data types.
+
+---
+
+For every table we will have a data structure to represent table items
 
 ```haskell
-module Infrastructure.Persistence where
-```
-
----
-
-We need to define the data types necessary to describe the database schema to our application
-
----
-
-Let's start with questionnaires
-
-```haskell
-import Domain.Id
-import qualified Domain.Questionnaire as Domain
-
--- rel8
-import Rel8
-
--- text
-import Data.Text
-
-data Questionnaire f = Questionnaire
-  { questionnaireId    :: Column f (Id Domain.Questionnaire)
-  , questionnaireTitle :: Column f Text
-  }
-```
-
----
-
-To distinguish between data types with the same name, we use qualified imports, which require us to use a namespace
-
----
-
-Now, what is that `f`?
-
-It describes the context (e.g. documentation/query expressions/results) in which the data needs to be considered
-
----
-
-This approach is usually called [Higher-kinded data](https://reasonablypolymorphic.com/blog/higher-kinded-data/).
-
-It is useful to distinguish the shape of data from the context in which they are considered
-
----
-
-To please `Rel8`, we need to add some deriving clauses
-
-```haskell
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
-
--- base
-import GHC.Generics
-
 data Questionnaire f = Questionnaire
   { questionnaireId    :: Column f (Id Domain.Questionnaire)
   , questionnaireTitle :: Column f Text
@@ -135,44 +98,11 @@ data Questionnaire f = Questionnaire
 
 ---
 
-We are missing an instance for `DBType (Id Domain.Questionnaire)`, which we can derive
+And a data structure to connect the Haskell data structure to the underlying table
 
-```haskell
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
--- rel8
-import Rel8
-
-newtype Id a = Id UUID
-  deriving newtype
-    ( FromJSON
-    , ToJSON
-    , ToSchema
-    , ToParamSchema
-    , DBType
-    )
-```
-
----
-
-Notice the `newtype` keyword. That means that instead of deriving instances looking at the generic structure of the data type, we use directly the instance provided by the inner type.
-
----
-
-Next we need to connect this Haskell representation to the database representation. We do this by defining the schema for the questionnaire table
 
 ```haskell
 questionnaireSchema :: TableSchema (Questionnaire Name)
-```
-
----
-
-A `TableSchema (Questionnaire Name)` requires us to provide a `name`, a `schema`, and a name of a column for every field of a `Questionnaire`
-
-```haskell
-{-# LANGUAGE OverloadedStrings #-}
-
 questionnaireSchema = TableSchema
   { name = "questionnaire"
   , schema = Nothing
@@ -185,29 +115,9 @@ questionnaireSchema = TableSchema
 
 ---
 
-This is our first example of a context
+The `name` and `columns` fields allow us to define what is the name of the table and of each field on the postgres side and to connect them to the Haskell side.
 
-```haskell
-data Name a = Name String
-```
-
-`Name a` is a datatype that contains a `String` for every type `a`.
-
-It is useful for documentation.
-
----
-
-This allows us to connect the Haskell representation of our data with the database representation, while keeping the two completely separate.
-
----
-
-We could do the same thing for `Question` and `Answer`, following the schema presented above.
-
----
-
-```bash
-git checkout chapter3.1
-```
+This allows detatching the naming on the database side form the ones in the code.
 
 ---
 
@@ -218,7 +128,7 @@ Now it is time to start writing some queries!
 The first query we want to write is to extract all the available questionnaires:
 
 ```haskell
--- SQL: SELECT * FROM questionnaire
+-- SELECT * FROM questionnaire
 allQuestionnaires = each questionnaireSchema
 ```
 
@@ -276,11 +186,9 @@ This is the same `do` notation we saw for `IO`
 
 Actually, `do` notation is far more general and works for every [`Monad`](https://hackage.haskell.org/package/base-4.16.1.0/docs/Prelude.html#t:Monad).
 
-For our purposes a monad instance on a data structure allows executing sequential computation is a given context.
+For our purposes a monad instance on a type allows executing computations sequentially in the context described by the type itself.
 
 ---
-
-Monads encode the ability to perform sequential computations in a given context.
 
 This focus on contexts is what makes monads so important in Haskell and why they are not that common in other programming languages.
 
@@ -291,7 +199,34 @@ class Applicative m => Monad m where
   (>>=) :: m a -> (a -> m b) -> m b
 ```
 
-To compute the result of `ma >>= f` we need to use `f`, which needs to use as argument something that can be obtained only through `ma`. This forces `ma` to be computed before `f`.
+To compute the result of `ma >>= f` we need to use `f`, which needs to use as argument something that can be obtained only through `ma`. This forces `ma` to be evaluated before `f`.
+
+---
+
+`(>>=)` is analogous to function application producing results in a given context
+
+```haskell
+(>>=) :: m a -> (a -> m b) -> m b
+
+-- compare it to
+(&)   ::   a -> (a ->   b) ->   b
+```
+
+---
+
+![bind](https://github.com/tweag/haskell-training/blob/main/material/diagrams/bind1.png?raw=true)
+
+---
+
+![bind result](https://github.com/tweag/haskell-training/blob/main/material/diagrams/bind3.png?raw=true)
+
+---
+
+![bind another](https://github.com/tweag/haskell-training/blob/main/material/diagrams/bind4.png?raw=true)
+
+---
+
+![bind another result](https://github.com/tweag/haskell-training/blob/main/material/diagrams/bind5.png?raw=true)
 
 ---
 
@@ -304,6 +239,24 @@ To compute the result of `ma >>= f` we need to use `f`, which needs to use as ar
 (.)   :: (b ->   c) -> (a ->   b) -> a ->   c
 ```
 
+---
+
+![kleisli](https://github.com/tweag/haskell-training/blob/main/material/diagrams/kleisli1.png?raw=true)
+
+---
+
+![kleisli composed](https://github.com/tweag/haskell-training/blob/main/material/diagrams/kleisli2.png?raw=true)
+
+---
+
+![kleisli another](https://github.com/tweag/haskell-training/blob/main/material/diagrams/kleisli3.png?raw=true)
+
+---
+
+![kleisli another composed](https://github.com/tweag/haskell-training/blob/main/material/diagrams/kleisli4.png?raw=true)
+
+---
+
 Monads allow us to compose functions which produce results in a given context.
 
 ---
@@ -315,6 +268,8 @@ As you might expect, `IO` is a monad, and `Query` is a monad.
 Let's go back to our query.
 
 We then filter only the `questions` which have the correct `Id Questionnaire`
+
+---
 
 `Rel8` offers us a `where_` combinator which allows us to filter based on a criterion.
 
@@ -329,17 +284,27 @@ where the first `_` has type `Expr Bool`
 
 First we want to extract the `question` `questionnaireId`.
 
+---
+
 We can use the `questionQuestionnaireId` field as a function
 
 ```haskell
   where_ $ _ (questionQuestionnaireId question)
 ```
 
-and be left with a hole `_ :: Expr (Id Questionnaire) -> Expr Bool` to fill.
+and be left with a hole
+
+```
+_ :: Expr (Id Questionnaire) -> Expr Bool
+```
+
+to fill.
 
 ---
 
 We need to compare our `questionQuestionnaireId question` with the `questionId` we got as input.
+
+---
 
 We can do this using the [`(==.)`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:-61--61-.) operator.
 
@@ -352,12 +317,15 @@ We can do this using the [`(==.)`](https://hackage.haskell.org/package/rel8-1.3.
 The compiler is signalling us that we are missing a `DBEq` instance on `Id Questionnaire`, which is needed to compare fields for equality.
 
 ```haskell
-  deriving newtype (DBType, DBEq)
+newtype Id a
+  deriving newtype (DBEq)
 ```
 
 ---
 
 Now we need a value of type `Expr (Id Questionnaire)` to fill our remaining hole.
+
+---
 
 We can use the [`lit`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:lit) function to lift our `Id Questionnaire` to the `Expr` context.
 
@@ -399,7 +367,7 @@ questionAnswers questionId = do
 ---
 
 ```bash
-git checkout chapter3.2
+git checkout chapter3.1
 ```
 
 ---
@@ -421,25 +389,34 @@ module Infrastructure.PostgresQuestionnaireRepository where
 Let's start by defining a concrete implementation of our interface and take it from there
 
 ```haskell
+postgresQuestionnaireRepository :: QuestionnaireRepository IO
+postgresQuestionnaireRepository = QuestionnaireRepository
+  { add = postgresAddQuestionnaire
+  , all = postgresAllQuestionnaires
+  }
+
+postgresAddQuestionnaire
+  :: Domain.Questionnaire
+  -> IO (Id Domain.Questionnaire)
+postgresAddQuestionnaire questionnaire = _
+
+postgresAllQuestionnaires :: IO [Identified Domain.Questionnaire]
+postgresAllQuestionnaires = _
+```
+
+note:
+```haskell
 import Domain.Id
 import qualified Domain.Questionnaire as Domain
 import Domain.QuestionnaireRepository
 
 -- base
 import Prelude hiding (all)
-
-postgresQuestionnaireRepository :: QuestionnaireRepository m
-postgresQuestionnaireRepository = QuestionnaireRepository
-  { add = postgresAddQuestionnaire
-  , all = postgresAllQuestionnaires
-  }
-
-postgresAddQuestionnaire :: Domain.Questionnaire -> m (Id Domain.Questionnaire)
-postgresAddQuestionnaire questionnaire = _
-
-postgresAllQuestionnaires :: m [Identified Domain.Questionnaire]
-postgresAllQuestionnaires = _
 ```
+
+---
+
+We are choosing to work in `IO` as our context, because we know that we will need to interact with the external world.
 
 ---
 
@@ -453,59 +430,36 @@ What we need to do is:
 
 ---
 
-The implementation we are looking for is clearly sequential. This means that the context `m` in which we are working needs to be a `Monad` and that we can use `do` notation.
-
-```haskell
-postgresAddQuestionnaire
-  :: Monad m
-  => Domain.Questionnaire
-  -> m (Id Domain.Questionnaire)
-postgresAddQuestionnaire questionnaire = do
-  _
-```
-
----
-
-The `Monad m` constraint needs to be propagated to `postgresQuestionnaireRepository`
-
-```haskell
-postgresQuestionnaireRepository
-  :: Monad m
-  => QuestionnaireRepository m
-```
-
----
-
 The first implementation step is creating a new `Id Questionnaire`.
+
+---
 
 We can generate one by generating a `UUID` with `nextRandom :: IO UUID` and then wrapping it with the `Id` constructor
 
 ```haskell
-import Data.UUID.V4
-
 generate :: IO (Id a)
 generate = Id <$> nextRandom
 ```
 
+note:
+```haskell
+import Data.UUID.V4
+```
+
 ---
-
-We notice now that `generate` is operating in the `IO` context, while we are working in a generic monadic context `m`.
-
----
-
-The easiest way to make it all work is to use `IO` instead of `m`, knowing that we might need to improve on it later.
 
 ```haskell
-import Domain.Id
-
-postgresQuestionnaireRepository :: QuestionnaireRepository IO
-
 postgresAddQuestionnaire
   :: Domain.Questionnaire
   -> IO (Id Domain.Questionnaire)
 postgresAddQuestionnaire questionnaire = do
   id <- generate
   _
+```
+
+note:
+```haskell
+import Domain.Id
 ```
 
 ---
@@ -519,12 +473,16 @@ We get all the conversion functions ready in the `Infrastructure.Serializer` mod
 Now we can use our serialization function in the implementation of `postgresCreateNewQuestionnaire`
 
 ```haskell
-import Infrastructure.Serializer
-
 postgresAddQuestionnaire questionnaire = do
   id <- generate
-  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
+  let serializedQuestionnaire = serializeQuestionnaire
+        (Identified id questionnaire)
   _
+```
+
+note:
+```haskell
+import Infrastructure.Serializer
 ```
 
 ---
@@ -532,34 +490,54 @@ postgresAddQuestionnaire questionnaire = do
 Now we can create our query
 
 ```haskell
-import qualified Infrastructure.Persistence as DB
-
--- rel8
-import Rel8
-
 postgresAddQuestionnaire questionnaire = do
   id <- generate
-  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
-      addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
+  let serializedQuestionnaire = serializeQuestionnaire
+        (Identified id questionnaire)
+      addQuestionnaire = DB.add
+        DB.questionnaireSchema
+        [lit serializedQuestionnaire]
   _
 ```
 
 where `add` is a query we defined in the `Persistence` module
+
+note:
+```haskell
+import qualified Infrastructure.Persistence as DB
+
+-- rel8
+import Rel8
+```
 
 ---
 
 And run it
 
 ```haskell
--- hasql
-import Hasql.Session
-
 postgresAddQuestionnaire questionnaire = do
   id <- generate
-  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
-      addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
-  eitherError <- run (statement () . insert $ addQuestionnaire) connection
+  let serializedQuestionnaire = serializeQuestionnaire
+        (Identified id questionnaire)
+      addQuestionnaire = DB.add
+        DB.questionnaireSchema
+        [lit serializedQuestionnaire]
+  eitherError <- run
+    (statement () . insert $ addQuestionnaire)
+    connection
   _
+```
+
+note:
+```yaml
+dependencies:
+  - hasql
+```
+
+
+```haskell
+-- hasql
+import Hasql.Session
 ```
 
 ---
@@ -567,15 +545,17 @@ postgresAddQuestionnaire questionnaire = do
 `run` requires a `connection` to work, so we need to pass that as an argument
 
 ```haskell
-import Hasql.Connection
-
-postgresAddQuestionnaire :: Connection -> Domain.Questionnaire -> IO (Id Domain.Questionnaire)
+postgresAddQuestionnaire
+  :: Connection
+  -> Domain.Questionnaire
+  -> IO (Id Domain.Questionnaire)
 postgresAddQuestionnaire connection questionnaire = do
-  id <- generate
-  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
-      addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
-  eitherError <- run (statement () . insert $ addQuestionnaire) connection
-  _
+  ...
+```
+
+note:
+```haskell
+import Hasql.Connection
 ```
 
 ---
@@ -583,34 +563,69 @@ postgresAddQuestionnaire connection questionnaire = do
 We need to propagate that argument to `postgresQuestionnaireRepository`
 
 ```haskell
-postgresQuestionnaireRepository :: Connection -> QuestionnaireRepository IO
-postgresQuestionnaireRepository connection = QuestionnaireRepository
-  { add = postgresAddQuestionnaire connection
-  , all = postgresAllQuestionnaires
-  }
+postgresQuestionnaireRepository
+  :: Connection
+  -> QuestionnaireRepository IO
+postgresQuestionnaireRepository connection
+  = QuestionnaireRepository
+    { add = postgresAddQuestionnaire connection
+    , all = postgresAllQuestionnaires
+    }
 ```
 
 ---
 
-Last thing we need to do is return the newly crafted `id`. We need to be careful though to manage the case in which the query actually failed. This is signalled by the `Either` returned by `run`.
+Last thing we need to do is return the newly crafted `id`.
+
+---
+
+We need to be careful though to manage the case in which the query actually failed.
+
+This is signalled by the `Either` returned by `run`.
 
 ---
 
 The most sensible thing we can do is pass on the information back to the caller
 
 ```haskell
-postgresAddQuestionnaire :: Connection -> Domain.Questionnaire -> IO (Either QueryError (Id Domain.Questionnaire))
+postgresAddQuestionnaire
+  :: Connection
+  -> Domain.Questionnaire
+  -> IO (Either QueryError (Id Domain.Questionnaire))
 ```
 
 ---
 
-This does not work since the return type of `add` for a `QuestionnaireRepository` needs to be of the form `m (Id Questionnaire)`.
+This does not work since the return type of `add` for a `QuestionnaireRepository` needs to be of the form `m (Id Questionnaire)`, while we have `m (Either QueryError (Id Questionnaire))`.
 
 We need to somehow move the `Either QueryError` inside the `m`.
 
 ---
 
-The solution is to use a monad transformer, which allows integrating `IO` and `Either QueryError` in the same context
+We have
+
+```haskell
+IO (Either QueryError (Id Domain.Questionnaire))
+```
+
+but we need something like
+
+```haskell
+(IO (Either QueryError _)) (Id Domain.Questionnaire)
+```
+
+---
+
+We could just define a `newtype` for the type we need
+
+```haskell
+newtype IoEitherQueryError a =
+  IoEitherQueryError (IO (Either QueryError a))
+```
+
+---
+
+This is actually a specialised version of
 
 ```haskell
 -- from Control.Monad.Trans.Except in the `transformers` package
@@ -618,19 +633,21 @@ The solution is to use a monad transformer, which allows integrating `IO` and `E
 newtype ExceptT e m a = ExceptT (m (Either e a))
 ```
 
-If we specialize this to `m = IO` and `e = QueryError`, we get exactly the type we're using
+---
+
+Using [`ExceptT`](https://hackage.haskell.org/package/transformers-0.6.0.4/docs/Control-Monad-Trans-Except.html#t:ExceptT) is easier than using `IOEitherQueryError` since many instances and helper functions are already defined.
 
 ---
 
-What do we gain?
-
-```haskell
-instance (Monad m) => Monad (ExceptT e m)
-```
+`ExceptT` is a so called monad transformer, which allows us to compose `Either` with other monads.
 
 ---
 
-Moreover, the monad instance handles failures automatically, i.e.
+`ExceptT e m` combines the semantic of `m` and of `Either e`.
+
+---
+
+In particular, the monad instance handles failures automatically, i.e.
 
 ```haskell
 foo :: Monad m => EitherT e m a
@@ -652,14 +669,28 @@ postgresAddQuestionnaire
   -> ExceptT QueryError IO (Id Domain.Questionnaire)
 ```
 
+note:
+```haskell
+-- transformers
+import Control.Monad.Trans.Except
+```
+
+```yaml
+dependencies:
+  - transformers
+```
+
 ---
 
-we need to update also
+We need to update also
 
 ```haskell
 postgresQuestionnaireRepository
   :: Connection
   -> QuestionnaireRepository (ExceptT QueryError IO)
+  
+postgresAllQuestionnaires
+  :: ExceptT QueryError IO [Identified Domain.Questionnaire]
 ```
 
 ---
@@ -668,15 +699,18 @@ Now `generate` is no more OK, because it returns something in `IO`, while here w
 
 ---
 
-Luckily we have a function `liftIO :: IO a -> ExceptT e IO a` which allows us to lift values in `IO` to `EitherT e m`.
+Luckily we have a function `lift :: m a -> ExceptT e m a` which allows us to lift values in `IO` to `EitherT e IO`.
 
 ```haskell
--- base
-import Control.Monad.IO.Class
-
 postgresAddQuestionnaire connection questionnaire = do
-  id <- liftIO generate
+  id <- lift generate
   ...
+```
+
+note:
+```haskell
+-- transformers
+import Control.Monad.Trans.Class
 ```
 
 ---
@@ -691,10 +725,15 @@ The code now becomes
 
 ```haskell
 postgresAddQuestionnaire connection questionnaire = do
-  id <- liftIO generate
-  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
-      addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
-  ExceptT $ run (statement () . insert $ addQuestionnaire) connection
+  id <- lift generate
+  let serializedQuestionnaire = serializeQuestionnaire
+        (Identified id questionnaire)
+      addQuestionnaire = DB.add
+        DB.questionnaireSchema
+        [lit serializedQuestionnaire]
+  ExceptT $ run
+    (statement () . insert $ addQuestionnaire)
+    connection
   _
 ```
 
@@ -704,10 +743,7 @@ Eventually, we can return our desired value
 
 ```haskell
 postgresAddQuestionnaire connection questionnaire = do
-  id <- liftIO generate
-  let serializedQuestionnaire = serializeQuestionnaire (Identified id questionnaire)
-      addQuestionnaire        = DB.add DB.questionnaireSchema [lit serializedQuestionnaire]
-  ExceptT $ run (statement () . insert $ addQuestionnaire) connection
+  ...
   pure id
 ```
 
@@ -718,20 +754,24 @@ Exercise for you: implement the `postgresAllQuestionnaires` function
 ---
 
 ```haskell
-postgresAllQuestionnaires :: Connection -> ExceptT QueryError IO [Identified Domain.Questionnaire]
+postgresAllQuestionnaires
+  :: Connection
+  -> ExceptT QueryError IO [Identified Domain.Questionnaire]
 postgresAllQuestionnaires connection = do
-  questionnaires <- ExceptT $ run (statement () . select $ DB.allQuestionnaires) connection
+  questionnaires <- ExceptT $ run
+    (statement () . select $ DB.allQuestionnaires)
+    connection
   pure $ deserializeQuestionnaire <$> questionnaires
 ```
 
 ---
 
-Similarly, we can implement all the other repositories `PostgresQuestionRepository`, `PostgresAnswerSetRepository` and `PostgresAnswerRepository`.
+Similarly, we can implement all the other repositories `PostgresQuestionRepository`, `PostgresSubmissionRepository` and `PostgresAnswerRepository`.
 
 ---
 
 ```bash
-git checkout chapter3.3
+git checkout chapter3.2
 ```
 
 ---
@@ -749,7 +789,7 @@ postgresAppServices :: AppServices
 postgresAppServices = AppServices
   { questionnaireRepository = _
   , questionRepository      = _
-  , answerSetRepository     = _
+  , submissionRepository    = _
   , answerRepository        = _
   }
 ```
@@ -765,7 +805,9 @@ We need a way to a move from the latter to the former
 What we want is a way to migrate between contexts
 
 ```haskell
-hoist :: QuestionnaireRepository m -> QuestionnaireRepository n
+hoist
+  :: QuestionnaireRepository (ExceptT QueryError IO)
+  -> QuestionnaireRepository Handler
 ```
 
 ---
@@ -773,7 +815,6 @@ hoist :: QuestionnaireRepository m -> QuestionnaireRepository n
 Let's start implementing `hoist` following the types, to find out what we actually need
 
 ```haskell
-hoist :: QuestionnaireRepository m -> QuestionnaireRepository n
 hoist (QuestionnaireRepository add all) = QuestionnaireRepository _ _
 ```
 
@@ -782,10 +823,14 @@ hoist (QuestionnaireRepository add all) = QuestionnaireRepository _ _
 The first hole has type
 
 ```haskell
-Questionnaire -> n (Id Questionnaire)
+Questionnaire -> Handler (Id Questionnaire)
 ```
 
-while we have `add :: Questionnaire -> m (Id Questionnaire)`
+while we have
+
+```haskell
+add :: Questionnaire -> ExceptT QueryError IO (Id Questionnaire)
+```
 
 ---
 
@@ -797,15 +842,28 @@ hoist (QuestionnaireRepository add all) = QuestionnaireRepository
   _
 ```
 
-Now the hole has type `m (Id Questionnaire) -> n (Id Questionnaire)`
+Now the hole has type
+
+```haskell
+   ExceptT QueryError IO (Id Questionnaire)
+-> Handler (Id Questionnaire)
+```
 
 ---
 
-Let's turn our attention to the other hole, now. It has type `n [Identified Questionnaire]`.
+Let's turn our attention to the other hole, now. It has type
+
+```haskell
+Handler [Identified Questionnaire]
+```
+
+We have
+
+```haskell
+all :: ExceptT QueryError IO [Identified Questionnaire]
+```
 
 ---
-
-We have `all :: m [Identified Questionnaire]`.
 
 ```haskell
 hoist (QuestionnaireRepository add all) = QuestionnaireRepository
@@ -813,16 +871,30 @@ hoist (QuestionnaireRepository add all) = QuestionnaireRepository
   (_ all)
 ```
 
-If we use it we are left with a `m [Identified Questionnaire] -> n [Identified Questionnaire]` hole
+If we use it we are left with a hole of type
+
+```haskell
+   ExceptT QueryError IO [Identified Questionnaire]
+-> Handler [Identified Questionnaire]
+```
 
 ---
 
-Notice now the similarity in the structure of both holes; they both have the form `m a -> n a`. Let's try to pass such a function as an argument.
+Notice now the similarity in the structure of both holes; they both have the form
+
+```haskell
+ExceptT QueryError IO a -> Handler a
+```
+
+Let's try to pass such a function as an argument.
 
 ---
 
 ```haskell
-hoist :: (m a -> n a) -> QuestionnaireRepository m -> QuestionnaireRepository n
+hoist
+  :: (ExceptT QueryError IO a -> Handler a)
+  -> QuestionnaireRepository (ExceptT QueryError IO)
+  -> QuestionnaireRepository Handler
 hoist f (QuestionnaireRepository add all) = QuestionnaireRepository
   (f . add)
   (f all)
@@ -847,7 +919,10 @@ We use the `forall` syntax to make that explicit.
 ```haskell
 {-# LANGUAGE RankNTypes #-}
 
-hoist :: (forall a. m a -> n a) -> QuestionnaireRepository m -> QuestionnaireRepository n
+hoist
+  :: (forall a. ExceptT QueryError IO a -> Handler a)
+  -> QuestionnaireRepository (ExceptT QueryError IO)
+  -> QuestionnaireRepository Handler
 hoist f (QuestionnaireRepository add all) = QuestionnaireRepository
   (f . add)
   (f all)
@@ -862,7 +937,7 @@ Similarly, we need a `hoist` function for the other repositories.
 ---
 
 ```bash
-git checkout chapter3.4
+git checkout chapter3.3
 ```
 
 ---
@@ -870,45 +945,66 @@ git checkout chapter3.4
 We can now progress with the definition of `postgresAppServices`
 
 ```haskell
+postgresAppServices :: Connection -> AppServices
+postgresAppServices connection = AppServices
+  { questionnaireRepository = Questionnaire.hoist _ $
+      postgresQuestionnaireRepository connection
+  , questionRepository      = Question.hoist _ $
+      postgresQuestionRepository connection
+  , submissionRepository    = Submission.hoist _ $
+      postgresSubmissionRepository connection
+  , answerRepository        = Answer.hoist _ $
+      postgresAnswerRepository connection
+  }
+```
+
+note:
+```haskell
 import Domain.AnswerRepository as Answer
-import Domain.AnswerSetRepository as AnswerSet
 import Domain.QuestionnaireRepository as Questionnaire
 import Domain.QuestionRepository as Question
+import Domain.SubmissionRepository as Submission
 import Infrastructure.PostgresAnswerRepository
-import Infrastructure.PostgresAnswerSetRepository
 import Infrastructure.PostgresQuestionRepository
 import Infrastructure.PostgresQuestionnaireRepository
-
-postgresAppServices connection = AppServices
-  { questionnaireRepository = Questionnaire.hoist _ $ postgresQuestionnaireRepository connection
-  , questionRepository      = Question.hoist      _ $ postgresQuestionRepository connection
-  , answerSetRepository     = AnswerSet.hoist     _ $ postgresAnswerSetRepository connection
-  , answerRepository        = Answer.hoist        _ $ postgresAnswerRepository connection
-  }
+import Infrastructure.PostgresSubmissionRepository
 ```
 
 ---
 
-Now all four holes require a function `ExceptT QueryError IO a -> Handler a`.
+Now all four holes require a function
+
+```haskell
+ExceptT QueryError IO a -> Handler a
+```
+
+---
 
 We can use the same function everywhere
 
+```haskell
+postgresAppServices connection = AppServices
+  { questionnaireRepository = Questionnaire.hoist f $
+      postgresQuestionnaireRepository connection
+  , questionRepository      = Question.hoist f $
+      postgresQuestionRepository connection
+  , submissionRepository    = Submission.hoist f $
+      postgresSubmissionRepository connection
+  , answerRepository        = Answer.hoist f $
+      postgresAnswerRepository connection
+  }
+  where
+    f :: ExceptT QueryError IO a -> Handler a
+    f exceptT = _
+```
+
+note:
 ```haskell
 -- hasql
 import Hasql.Session
 
 -- transformers
 import Control.Monad.Trans.Except
-
-postgresAppServices connection = AppServices
-  { questionnaireRepository = Questionnaire.hoist f $ postgresQuestionnaireRepository connection
-  , questionRepository      = Question.hoist      f $ postgresQuestionRepository connection
-  , answerSetRepository     = AnswerSet.hoist     f $ postgresAnswerSetRepository connection
-  , answerRepository        = Answer.hoist        f $ postgresAnswerRepository connection
-  }
-  where
-    f :: ExceptT QueryError IO a -> Handler a
-    f exceptT = _
 ```
 
 ---
@@ -919,7 +1015,21 @@ We can use the `Handler` constructor
     f exceptT = Handler _
 ```
 
-which leaves us with a `ExceptT ServerError IO a` hole. It looks similar to our `exceptT :: ExceptT QueryError IO a` type, but the error type is different.
+---
+
+We are left with a
+
+```haskell
+ExceptT ServerError IO a
+```
+
+hole. It looks similar to our
+
+```haskell
+exceptT :: ExceptT QueryError IO a
+```
+
+type, but the error type is different.
 
 ---
 
@@ -929,7 +1039,11 @@ We can use [`withExceptT`](https://hackage.haskell.org/package/transformers/docs
     f exceptT = Handler $ withExceptT _ exceptT
 ```
 
-where the hole has type `QueryError -> ServerError`.
+where the hole has type
+
+```haskell
+QueryError -> ServerError
+```
 
 ---
 
@@ -938,10 +1052,20 @@ We need to decide how to handle the database errors at the server level.
 To keep things simple, we always return a 500 response with the query error in the body.
 
 ```haskell
+f exceptT = Handler $ withExceptT
+  (\queryError -> err500 {errBody = pack $ show queryError})
+  exceptT
+```
+
+note:
+```yaml
+dependencies:
+  - bytestring
+```
+
+```haskell
 -- bytestring
 import Data.ByteString.Lazy.Char8
-
-f exceptT = Handler $ withExceptT (\queryError -> err500 {errBody = pack $ show queryError}) exceptT
 ```
 
 ---
@@ -959,6 +1083,14 @@ module Api.Application where
 First we can define an `Application` as
 
 ```haskell
+app :: AppServices -> Application
+app appServices = serve
+  (Proxy :: Proxy (NamedRoutes FormsApi))
+  (formsServer appServices)
+```
+
+note:
+```haskell
 import Api.AppServices
 import Api.Forms
 
@@ -967,9 +1099,21 @@ import Data.Proxy
 
 -- servant-server
 import Servant
+```
 
-app :: AppServices -> Application
-app appServices = serve (Proxy :: Proxy (NamedRoutes FormsApi)) (formsServer appServices)
+---
+
+We are missing a `FromHttpApiData` for `Id`
+
+```haskell
+newtype Id a = Id UUID
+  deriving newtype FromHttpApiData
+```
+
+note:
+```haskell
+-- servant
+import Servant.API
 ```
 
 ---
@@ -983,6 +1127,25 @@ data Proxy a = Proxy
 ---
 
 At last, we can write our `main` function
+
+```haskell
+main :: IO ()
+main = do
+  connection <- acquire
+    "host=localhost port=5432 dbname=db user=user password=pwd"
+  either
+    (fail . unpack . fromMaybe "unable to connect to the database")
+    (run 8080 . app . postgresAppServices)
+    connection
+```
+
+note:
+```yaml
+executables:
+  forms:
+    dependencies:
+      - warp
+```
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
@@ -999,13 +1162,8 @@ import Hasql.Connection
 -- warp
 import Network.Wai.Handler.Warp
 
-main :: IO ()
-main = do
-  connection <- acquire "host=postgres port=5432 dbname=db user=user password=pwd"
-  either
-    (fail . unpack . fromMaybe "unable to connect to the database")
-    (run 8080 . app . postgresAppServices)
-    connection
+import Api.Application
+import Api.AppServices
 ```
 
 ---
@@ -1019,7 +1177,7 @@ Otherwise, we build our `AppServices`, and we run our application on port 8080.
 ---
 
 ```bash
-git checkout chapter3.5
+git checkout chapter3.4
 ```
 
 ---
@@ -1061,7 +1219,7 @@ curl --request POST \
   --data '{
 	"title": "a question",
 	"answerType": "Paragraph",
-	"questionnaireId": "d0243d02-13e1-46cc-98a2-25ec61bcb203"
+	"questionnaireId": "{$QUESTIONNAIRE_ID}"
 }'
 ```
 
@@ -1069,14 +1227,14 @@ curl --request POST \
 
 ```bash
 curl --request GET \
-  --url http://localhost:8080/questions/d0243d02-13e1-46cc-98a2-25ec61bcb203
+  --url http://localhost:8080/questions/{$QUESTIONNAIRE_ID}
 ```
 
 ---
 
 ```bash
 curl --request POST \
-  --url http://localhost:8080/record-answer-set \
+  --url http://localhost:8080/record-submission \
   --header 'Content-Type: application/json' \
   --data '[
 	{
@@ -1084,7 +1242,7 @@ curl --request POST \
 			"tag": "Paragraph",
 			"contents": "the answer"
 		},
-		"questionId": "b4d8a29e-de67-4b14-b2c5-049ecece89f5"
+		"questionId": "{$QUESTION_ID}"
 	}
 ]'
 ```
@@ -1093,21 +1251,19 @@ curl --request POST \
 
 ```bash
 curl --request GET \
-  --url http://localhost:8080/answer-sets/d0243d02-13e1-46cc-98a2-25ec61bcb203
+  --url http://localhost:8080/submissions/{$QUESTIONNAIRE_ID}
 ```
 
 ---
 
 ```bash
 curl --request GET \
-  --url http://localhost:8080/set-answers/33c9522f-527a-4f3d-9e65-3873e79a4229
+  --url http://localhost:8080/submission-answers/{$SUBMISSION_ID}
 ```
 
 ---
 
 ```bash
 curl --request GET \
-  --url http://localhost:8080/question-answers/b4d8a29e-de67-4b14-b2c5-049ecece89f5
+  --url http://localhost:8080/question-answers/{$QUESTION_ID}
 ```
-
----
