@@ -154,7 +154,7 @@ Next we want to retrieve all the `Question`s for a single `Questionnaire`.
 
 ```sql
 SELECT * FROM question
-WHERE questionnaire_id = :questionnaire_id
+WHERE question.questionnaire_id = :questionnaire_id
 ```
 
 ---
@@ -169,6 +169,26 @@ questionnaireQuestions
 
 ---
 
+We want to translate piece by piece the following query
+
+```sql
+SELECT * FROM question
+WHERE
+  question.questionnaire_id
+  =
+  :questionnaire_id
+```
+
+---
+
+```sql [1]
+SELECT * FROM question
+WHERE
+  question.questionnaire_id
+  =
+  :questionnaire_id
+```
+
 We start by retrieving all the `Question`s
 
 
@@ -180,7 +200,123 @@ questionnaireQuestions questionnaireId = do
 
 ---
 
-This is the same `do` notation we saw for `IO`
+```sql [2]
+SELECT * FROM question
+WHERE
+  question.questionnaire_id
+  =
+  :questionnaire_id
+```
+
+`Rel8` offers us a [`where_`](https://hackage.haskell.org/package/rel8-1.4.0.0/docs/Rel8.html#v:where_) combinator which allows us to filter based on a criterion.
+
+```haskell [1]
+  where_ $
+```
+
+where the first `_` has type `Expr Bool`
+
+---
+
+```sql [3]
+SELECT * FROM question
+WHERE
+  question.questionnaire_id
+  =
+  :questionnaire_id
+```
+
+First we want to extract the `question` `questionnaireId`.
+
+```haskell [2]
+  where_ $
+    questionQuestionnaireId question
+```
+
+---
+
+```sql [4]
+SELECT * FROM question
+WHERE
+  question.questionnaire_id
+  =
+  :questionnaire_id
+```
+
+We have the [`(==.)`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:-61--61-.) operator to compare `Expr _` types.
+
+```haskell [3]
+  where_ $
+    questionQuestionnaireId question
+    ==.
+```
+
+---
+
+The compiler is signalling us that we are missing a `DBEq` instance on `Id Questionnaire`, which is needed to compare fields for equality.
+
+```haskell
+newtype Id a
+  deriving newtype (DBEq)
+```
+
+---
+
+```sql [5]
+SELECT * FROM question
+WHERE
+  question.questionnaire_id
+  =
+  :questionnaire_id
+```
+
+We would like to use our `questionnaireId` input value
+
+```haskell [4]
+  where_ $
+    questionQuestionnaireId question
+    ==.
+    questionnaireId
+```
+
+---
+
+It doesn't work since we are working in the `Expr` context.
+
+---
+
+```sql [5]
+SELECT * FROM question
+WHERE
+  question.questionnaire_id
+  =
+  :questionnaire_id
+```
+
+We can use the [`lit`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:lit) function to lift our `Id Questionnaire` to the `Expr` context.
+
+```haskell [4]
+  where_ $
+    questionQuestionnaireId question
+    ==.
+    lit questionnaireId
+```
+
+---
+
+As a last step, we need to return a value
+
+```haskell
+questionnaireQuestions questionnaireId = do
+  question <- each questionSchema
+  where_ $
+    questionQuestionnaireId question ==. lit questionnaireId
+  pure question
+```
+
+---
+
+Did you notice that w are using the same `do` notation we saw for `IO`?
 
 ---
 
@@ -265,98 +401,13 @@ As you might expect, `IO` is a monad, and `Query` is a monad.
 
 ---
 
-Let's go back to our query.
-
-We then filter only the `questions` which have the correct `Id Questionnaire`
-
----
-
-`Rel8` offers us a `where_` combinator which allows us to filter based on a criterion.
-
-```haskell
-  where_ $ _
-  _
-```
-
-where the first `_` has type `Expr Bool`
-
----
-
-First we want to extract the `question` `questionnaireId`.
-
----
-
-We can use the `questionQuestionnaireId` field as a function
-
-```haskell
-  where_ $ _ (questionQuestionnaireId question)
-```
-
-and be left with a hole
-
-```
-_ :: Expr (Id Questionnaire) -> Expr Bool
-```
-
-to fill.
-
----
-
-We need to compare our `questionQuestionnaireId question` with the `questionId` we got as input.
-
----
-
-We can do this using the [`(==.)`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:-61--61-.) operator.
-
-```haskell
-  where_ $ questionQuestionnaireId question ==. _
-```
-
----
-
-The compiler is signalling us that we are missing a `DBEq` instance on `Id Questionnaire`, which is needed to compare fields for equality.
-
-```haskell
-newtype Id a
-  deriving newtype (DBEq)
-```
-
----
-
-Now we need a value of type `Expr (Id Questionnaire)` to fill our remaining hole.
-
----
-
-We can use the [`lit`](https://hackage.haskell.org/package/rel8-1.3.1.0/docs/Rel8.html#v:lit) function to lift our `Id Questionnaire` to the `Expr` context.
-
-```haskell
-  where_
-    $   questionQuestionnaireId question
-    ==. lit questionnaireId
-```
-
----
-
-As a last step, we need to return a value
-
-```haskell
-questionnaireQuestions questionnaireId = do
-  question <- each questionSchema
-  where_
-    $   questionQuestionnaireId question
-    ==. lit questionnaireId
-  pure question
-```
-
----
-
 Exercise for you: try to write a query to retrieve all the answers for a given question
 
 ---
 
 ```haskell
 -- SELECT * FROM answer
--- WHERE question_id = :question_id
+-- WHERE answer.question_id = :question_id
 questionAnswers :: Id Domain.Question -> Query (Answer Expr)
 questionAnswers questionId = do
   answer <- each answerSchema
@@ -604,15 +655,19 @@ We need to somehow move the `Either QueryError` inside the `m`.
 
 We have
 
-```haskell
-IO (Either QueryError (Id Domain.Questionnaire))
-```
+![transformer](https://raw.githubusercontent.com/tweag/haskell-training/main/material/diagrams/transformer.png)
 
-but we need something like
+---
 
-```haskell
-(IO (Either QueryError _)) (Id Domain.Questionnaire)
-```
+The compiler sees
+
+![transformer](https://raw.githubusercontent.com/tweag/haskell-training/main/material/diagrams/transformer1.png)
+
+---
+
+We would like
+
+![transformer](https://raw.githubusercontent.com/tweag/haskell-training/main/material/diagrams/transformer2.png)
 
 ---
 
