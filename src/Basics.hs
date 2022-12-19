@@ -41,6 +41,16 @@ data Shape
   | Square {side :: Float}
   | Circle {radius :: Float}
 
+-- | Perimeter of a shape
+--
+-- >>> perimeter (Rectangle 1 2)
+-- 6.0
+--
+-- >>> perimeter (Square 1)
+-- 4.0
+--
+-- >>> perimeter (Circle 1)
+-- 6.2831855
 perimeter :: Shape -> Float
 perimeter (Rectangle side1 side2) = (side1 + side2) * 2
 perimeter (Square side)           = side * 4

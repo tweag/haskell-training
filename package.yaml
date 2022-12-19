@@ -53,3 +53,11 @@ tests:
     dependencies:
       - haskell-training
       - hspec
+
+  forms-doctest:
+    source-dirs:      test
+    main:             doctests.hs
+    ghc-options:      -threaded
+    dependencies:
+      - haskell-training
+      - doctest-parallel >= 0.1
