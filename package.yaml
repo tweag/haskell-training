@@ -45,3 +45,11 @@ executables:
       - aeson-pretty
       - bytestring
       - servant-openapi3
+
+tests:
+  forms-spec:
+    main:           Spec.hs
+    source-dirs:    spec
+    dependencies:
+      - haskell-training
+      - hspec
