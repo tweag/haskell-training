@@ -1,0 +1,16 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 687.5 345.99999999999994" width="687.5" height="345.99999999999994" filter="invert(93%) hue-rotate(180deg)">
+  <!-- svg-source:excalidraw -->
+  
+  <defs>
+    <style class="style-fonts">
+      @font-face {
+        font-family: "Virgil";
+        src: url("https://excalidraw.com/Virgil.woff2");
+      }
+      @font-face {
+        font-family: "Cascadia";
+        src: url("https://excalidraw.com/Cascadia.woff2");
+      }
+    </style>
+  </defs>
+  <g stroke-linecap="round" transform="translate(246.5 10) rotate(0 215.5 162.99999999999997)"><path d="M0.2 -0.77 C149.98 1.47, 301.47 2.05, 430.11 -0.25 M-0.14 0.41 C171.32 0.47, 342.22 0.21, 431.36 -0.15 M431.03 -1.2 C433.41 110.38, 432.54 222.57, 430.59 325.16 M431.14 -0.07 C431.12 90.07, 431.93 180.99, 430.76 325.34 M430.17 325.95 C296.14 326.55, 162.37 327.16, -0.45 325.86 M431.12 326.05 C265.43 325.36, 99.1 325.35, -0.45 326.43 M0.8 327.08 C-1.28 236.18, -1.57 147.7, 1.36 0.3 M0.19 326.34 C0.38 252.49, 1.1 178.49, -0.22 -0.44" stroke="#d9480f" stroke-width="1" fill="none"></path></g><g stroke-linecap="round" transform="translate(512.5 128.5) rotate(0 25.5 30)"><path d="M-0.64 -1.29 C20.29 -1.77, 36.51 -2.31, 51.88 1.09 M-0.62 0.65 C19.39 0, 37.02 0.03, 50.42 -0.68 M50.92 -1.36 C52.08 14.41, 50.77 29.36, 49.31 61.64 M50.18 -0.96 C50.66 18.77, 51.37 35.03, 50.44 60.16 M51.45 59.59 C36.75 58.76, 21.08 62.1, -1.75 60.86 M51.79 60.64 C40.9 60.88, 30.3 60.98, -0.78 60.67 M1.91 58.24 C0.65 36.95, -0.08 10.87, 0.21 -0.43 M0.44 60.57 C-1.1 38.39, -0.04 16.55, 0.4 0.45" stroke="#000000" stroke-width="1" fill="none"></path></g><g transform="translate(312.5 37.5) rotate(0 11 23)"><text x="0" y="32" font-family="Virgil, Segoe UI Emoji" font-size="36px" fill="#d9480f" text-anchor="start" style="white-space: pre;" direction="ltr">s</text></g><g transform="translate(525 135.5) rotate(0 13 25)"><text x="13" y="34" font-family="Virgil, Segoe UI Emoji" font-size="36px" fill="#000000" text-anchor="middle" style="white-space: pre;" direction="ltr">a</text></g><g stroke-opacity="0" fill-opacity="0" stroke-linecap="round" transform="translate(10 128.5) rotate(0 25.5 30)"><path d="M-1.75 0.86 C9.86 -0.58, 24.55 1.07, 52.28 0.47 M-0.78 0.67 C19.52 0.53, 36.31 0.58, 50.12 0.6 M51.21 -0.43 C52.37 20.86, 50.32 41.2, 52.14 58.22 M51.4 0.45 C51.85 19.33, 51.65 37.4, 51.78 60.92 M51.05 59.24 C35.55 60.98, 16.65 58.7, -1.04 60.94 M50.59 60.96 C32.47 59.65, 12.58 59.21, 0.36 60.28 M1.14 61.79 C0.02 41.73, -1.82 26.65, 0.23 0.13 M-0.83 59.1 C-1 47.13, 0.1 35.72, -0.62 -0.18" stroke="#000000" stroke-width="1" fill="none"></path></g><g stroke-opacity="0" fill-opacity="0" transform="translate(17.5 133.5) rotate(0 18 25)"><text x="18" y="34" font-family="Virgil, Segoe UI Emoji" font-size="36px" fill="#000000" text-anchor="middle" style="white-space: pre;" direction="ltr">a'</text></g></svg>
