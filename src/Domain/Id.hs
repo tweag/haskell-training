@@ -25,7 +25,7 @@ import Data.UUID
 import Data.UUID.V4
 
 newtype Id a = Id UUID
-  deriving newtype (Show, FromJSON, ToJSON, ToSchema, ToParamSchema, DBType, DBEq, FromHttpApiData)
+  deriving newtype (Eq, Ord, Show, FromJSON, ToJSON, ToSchema, ToParamSchema, DBType, DBEq, FromHttpApiData)
 
 data Identified a = Identified
   { id     :: Id a
