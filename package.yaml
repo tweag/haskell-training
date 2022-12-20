@@ -53,6 +53,7 @@ tests:
     dependencies:
       - haskell-training
       - hspec
+      - QuickCheck
 
   forms-doctest:
     source-dirs:      test

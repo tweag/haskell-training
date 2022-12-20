@@ -40,6 +40,12 @@ data Shape
   = Rectangle {side1 :: Float, side2 :: Float}
   | Square {side :: Float}
   | Circle {radius :: Float}
+  deriving Show
+
+isDegenerate :: Shape -> Bool
+isDegenerate (Rectangle s1 s2) = s1 == 0 && s2 == 0
+isDegenerate (Square s)        = s == 0
+isDegenerate (Circle r)        = r == 0
 
 -- | Perimeter of a shape
 --
