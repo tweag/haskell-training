@@ -34,3 +34,10 @@ modifyAnswers
   -> InMemoryState -> InMemoryState
 modifyAnswers f state =
   state {answers = f $ answers state}
+
+emptyState :: InMemoryState
+emptyState = InMemoryState
+  { questionnaires = empty
+  , questions = empty
+  , answers = empty
+  }

@@ -6,15 +6,6 @@ import Domain.Id
 import Domain.Question
 import Domain.Questionnaire
 
--- hasql
-import Hasql.Session
-
--- servant-server
-import Servant.Server
-
--- transformers
-import Control.Monad.Trans.Except
-
 data QuestionRepository m = QuestionRepository
   { add                 :: Question
                         -> m (Id Question)
@@ -23,9 +14,9 @@ data QuestionRepository m = QuestionRepository
   }
 
 hoist
-  :: (forall a. ExceptT QueryError IO a -> Handler a)
-  -> QuestionRepository (ExceptT QueryError IO)
-  -> QuestionRepository Handler
+  :: (forall a. m a -> n a)
+  -> QuestionRepository m
+  -> QuestionRepository n
 hoist f (QuestionRepository add allForQuestionnaire) = QuestionRepository
   (f . add)
   (f . allForQuestionnaire)
